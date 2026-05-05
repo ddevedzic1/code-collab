@@ -1,0 +1,119 @@
+package com.codecollab.system_events_service.controller;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.transaction.TransactionSystemException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import com.codecollab.system_events_service.exception.AppException;
+import com.codecollab.system_events_service.util.Messages;
+
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.persistence.RollbackException;
+import jakarta.validation.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@ControllerAdvice
+@RequiredArgsConstructor
+@ApiResponses(value = {
+		@ApiResponse(responseCode = "400", description = "Bad Request",
+				content = @Content(schema = @Schema(implementation = BaseController.ErrorDetails.class))),
+		@ApiResponse(responseCode = "401", description = "Unauthorized"),
+		@ApiResponse(responseCode = "403", description = "Forbidden",
+				content = @Content(schema = @Schema(implementation = BaseController.ErrorDetails.class))),
+		@ApiResponse(responseCode = "404", description = "Not Found",
+				content = @Content(schema = @Schema(implementation = BaseController.ErrorDetails.class))),
+		@ApiResponse(responseCode = "500", description = "Internal Server Error",
+				content = @Content(schema = @Schema(implementation = BaseController.ErrorDetails.class)))
+})
+public abstract class BaseController {
+
+	public static final String DATA_INTEGRITY_ERROR = "duplicate-key-error";
+
+	private final Messages messages;
+
+	@ExceptionHandler(AppException.class)
+	public ResponseEntity<ErrorDetails> handleAppException(AppException ex) {
+		var status = statusFor(ex.getCode());
+
+		if (AppException.INTERNAL_ERROR.equals(ex.getCode()) || AppException.DATABASE_ERROR.equals(ex.getCode())) {
+			log.error("Application error [{}]", ex.getCode(), ex);
+			return new ResponseEntity<>(
+					new ErrorDetails(ex.getCode(), messages.get(Messages.INTERNAL_ERROR_MSG_KEY)),
+					status);
+		}
+
+		return new ResponseEntity<>(new ErrorDetails(ex.getCode(), ex.getMessage()), status);
+	}
+
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<ErrorDetails> handleValidation(MethodArgumentNotValidException ex) {
+		var message = ex.getBindingResult().getFieldErrors().stream()
+				.findFirst()
+				.map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+				.orElse(ex.getMessage());
+		return new ResponseEntity<>(new ErrorDetails(AppException.VALIDATION_ERROR, message), HttpStatus.BAD_REQUEST);
+	}
+
+	@ExceptionHandler(ConstraintViolationException.class)
+	public ResponseEntity<ErrorDetails> handleConstraintViolation(ConstraintViolationException ex) {
+		var message = ex.getConstraintViolations().iterator().next().getMessage();
+		return new ResponseEntity<>(new ErrorDetails(AppException.VALIDATION_ERROR, message), HttpStatus.BAD_REQUEST);
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ErrorDetails> handleDataIntegrity(DataIntegrityViolationException ex) {
+		log.warn("Data integrity violation", ex);
+		return new ResponseEntity<>(
+				new ErrorDetails(DATA_INTEGRITY_ERROR, messages.get("dataIntegrityError")),
+				HttpStatus.BAD_REQUEST);
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<ErrorDetails> handleAccessDenied(AccessDeniedException ex) {
+		return new ResponseEntity<>(new ErrorDetails(AppException.FORBIDDEN_ERROR, ex.getMessage()), HttpStatus.FORBIDDEN);
+	}
+
+	@ExceptionHandler(TransactionSystemException.class)
+	public ResponseEntity<ErrorDetails> handleTransaction(TransactionSystemException ex) {
+		var cause = ex.getCause();
+		if (cause instanceof RollbackException && cause.getCause() instanceof ConstraintViolationException cve) {
+			var message = cve.getConstraintViolations().iterator().next().getMessage();
+			return new ResponseEntity<>(new ErrorDetails(AppException.VALIDATION_ERROR, message), HttpStatus.BAD_REQUEST);
+		}
+		log.error("Transaction system error", ex);
+		return new ResponseEntity<>(
+				new ErrorDetails(AppException.INTERNAL_ERROR, messages.get(Messages.INTERNAL_ERROR_MSG_KEY)),
+				HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<ErrorDetails> handleException(Exception ex) {
+		log.error("Unhandled exception", ex);
+		return new ResponseEntity<>(
+				new ErrorDetails(AppException.INTERNAL_ERROR, messages.get(Messages.INTERNAL_ERROR_MSG_KEY)),
+				HttpStatus.INTERNAL_SERVER_ERROR);
+	}
+
+	private HttpStatus statusFor(String code) {
+		return switch (code) {
+			case AppException.NOT_FOUND_ERROR -> HttpStatus.NOT_FOUND;
+			case AppException.FORBIDDEN_ERROR -> HttpStatus.FORBIDDEN;
+			case AppException.VALIDATION_ERROR -> HttpStatus.BAD_REQUEST;
+			case AppException.INTERNAL_ERROR, AppException.DATABASE_ERROR, AppException.INVALID_CLASS_NAME ->
+					HttpStatus.INTERNAL_SERVER_ERROR;
+			default -> HttpStatus.BAD_REQUEST;
+		};
+	}
+
+	public record ErrorDetails(String code, String message) {}
+}
