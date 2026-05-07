@@ -11,9 +11,6 @@ import org.springframework.context.annotation.Configuration;
 
 import com.codecollab.execution_service.exception.AppException;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @Configuration
 public class FlywayConfig {
 
