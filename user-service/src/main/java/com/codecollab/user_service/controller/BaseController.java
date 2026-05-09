@@ -1,10 +1,12 @@
 package com.codecollab.user_service.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.TransactionSystemException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,12 +20,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.persistence.RollbackException;
 import jakarta.validation.ConstraintViolationException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ControllerAdvice
-@RequiredArgsConstructor
 @ApiResponses(value = {
 		@ApiResponse(responseCode = "400", description = "Bad Request",
 				content = @Content(schema = @Schema(implementation = BaseController.ErrorDetails.class))),
@@ -39,7 +39,8 @@ public abstract class BaseController {
 
 	public static final String DATA_INTEGRITY_ERROR = "duplicate-key-error";
 
-	private final Messages messages;
+	@Autowired
+	protected Messages messages;
 
 	@ExceptionHandler(AppException.class)
 	public ResponseEntity<ErrorDetails> handleAppException(AppException ex) {
@@ -59,7 +60,7 @@ public abstract class BaseController {
 	public ResponseEntity<ErrorDetails> handleValidation(MethodArgumentNotValidException ex) {
 		var message = ex.getBindingResult().getFieldErrors().stream()
 				.findFirst()
-				.map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+				.map(FieldError::getDefaultMessage)
 				.orElse(ex.getMessage());
 		return new ResponseEntity<>(new ErrorDetails(AppException.VALIDATION_ERROR, message), HttpStatus.BAD_REQUEST);
 	}

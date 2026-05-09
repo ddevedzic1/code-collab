@@ -1,14 +1,15 @@
 package com.codecollab.execution_service.service;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.codecollab.execution_service.util.Messages;
 
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
 public abstract class BaseService {
 
-	protected final Messages messages;
-	protected final ModelMapper modelMapper;
+	@Autowired
+	protected Messages messages;
+
+	@Autowired
+	protected ModelMapper modelMapper;
 }
