@@ -44,16 +44,17 @@ CREATE TRIGGER trg_languages_set_updated_at
 CREATE OR REPLACE FUNCTION languages_check_unique_active_code()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM languages
-        WHERE code = NEW.code
-          AND id <> NEW.id
-          AND (end_date IS NULL OR end_date > NOW())
-    ) THEN
+    EXECUTE format(
+        'SELECT 1 FROM %I.%I WHERE code = $1 AND id <> $2 AND (end_date IS NULL OR end_date > NOW()) LIMIT 1',
+        TG_TABLE_SCHEMA, TG_TABLE_NAME
+    )
+    USING NEW.code, NEW.id;
+
+    IF FOUND THEN
         RAISE EXCEPTION 'Duplicate active language code: %', NEW.code
             USING ERRCODE = 'unique_violation';
     END IF;
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
