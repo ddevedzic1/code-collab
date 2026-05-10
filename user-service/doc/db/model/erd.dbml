@@ -1,0 +1,17 @@
+Table users {
+  id uuid [pk, default: `gen_random_uuid()`]
+  username varchar(300) [not null, note: 'Unique among active rows (end_date IS NULL) via partial index']
+  email varchar(300) [not null, note: 'Unique among active rows (end_date IS NULL) via partial index']
+  password varchar(300) [not null, note: 'BCrypt hash']
+  start_date timestamp [not null, default: `now()`]
+  end_date timestamp
+  created_at timestamp [not null, default: `now()`]
+  created_by varchar(300)
+  updated_at timestamp [note: 'Maintained by trg_users_set_updated_at trigger']
+  updated_by varchar(300)
+
+  indexes {
+    username [unique, name: 'idx_users_username_active', note: 'Partial: WHERE end_date IS NULL']
+    email [unique, name: 'idx_users_email_active', note: 'Partial: WHERE end_date IS NULL']
+  }
+}
