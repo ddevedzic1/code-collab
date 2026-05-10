@@ -1,0 +1,13 @@
+Table languages {
+  id uuid [pk, default: `gen_random_uuid()`]
+  code varchar(30) [not null, note: 'Slug; unique among active rows (end_date IS NULL OR end_date > NOW()) via trg_languages_unique_active_code']
+  name varchar(300) [not null]
+  version varchar(30) [not null]
+  runtime_image varchar(300) [not null, note: 'Docker image, e.g. python:3.11-slim']
+  start_date timestamp [not null, default: `now()`]
+  end_date timestamp
+  created_at timestamp [not null, default: `now()`]
+  created_by varchar(300)
+  updated_at timestamp [note: 'Maintained by trg_languages_set_updated_at trigger']
+  updated_by varchar(300)
+}
