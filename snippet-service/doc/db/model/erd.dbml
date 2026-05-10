@@ -11,3 +11,22 @@ Table languages {
   updated_at timestamp [note: 'Maintained by trg_languages_set_updated_at trigger']
   updated_by varchar(300)
 }
+
+Table snippets {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, note: 'Logical reference to user-service users.id; no DB FK across services']
+  language_id uuid [not null, ref: > languages.id]
+  title varchar(300) [not null]
+  content text [not null]
+  start_date timestamp [not null, default: `now()`]
+  end_date timestamp
+  created_at timestamp [not null, default: `now()`]
+  created_by varchar(300)
+  updated_at timestamp [note: 'Maintained by trg_snippets_set_updated_at trigger']
+  updated_by varchar(300)
+
+  indexes {
+    user_id [name: 'idx_snippets_user_id']
+    language_id [name: 'idx_snippets_language_id']
+  }
+}
