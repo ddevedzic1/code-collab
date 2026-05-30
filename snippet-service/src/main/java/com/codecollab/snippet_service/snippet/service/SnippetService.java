@@ -39,7 +39,7 @@ public class SnippetService extends BaseService {
 
 	@Transactional(readOnly = true)
 	public SnippetResponseDto getById(UUID id) {
-		var snippet = snippetRepository.findWithLanguageById(id)
+		var snippet = snippetRepository.findActiveById(id)
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.snippet.not.found")));
 		return modelMapper.map(snippet, SnippetResponseDto.class);
@@ -67,7 +67,7 @@ public class SnippetService extends BaseService {
 
 	@Transactional
 	public SnippetResponseDto update(UUID id, SnippetUpdateDto dto) {
-		var snippet = findActiveById(id);
+		var snippet = getActiveSnippet(id);
 
 		if (dto.getLanguageId() != null && !dto.getLanguageId().equals(snippet.getLanguage().getId())) {
 			snippet.setLanguage(findActiveLanguage(dto.getLanguageId()));
@@ -86,14 +86,14 @@ public class SnippetService extends BaseService {
 
 	@Transactional
 	public void softDelete(UUID id) {
-		var snippet = findActiveById(id);
+		var snippet = getActiveSnippet(id);
 		snippet.setEndDate(LocalDateTime.now());
 		snippetRepository.save(snippet);
 		log.info("Soft-deleted snippet {}", id);
 	}
 
-	private Snippet findActiveById(UUID id) {
-		return snippetRepository.findWithLanguageById(id)
+	private Snippet getActiveSnippet(UUID id) {
+		return snippetRepository.findActiveById(id)
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.snippet.not.found")));
 	}

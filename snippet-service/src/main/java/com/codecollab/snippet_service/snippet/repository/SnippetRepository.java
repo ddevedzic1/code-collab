@@ -14,7 +14,7 @@ import com.codecollab.snippet_service.snippet.model.Snippet;
 public interface SnippetRepository extends JpaRepository<Snippet, UUID> {
 
 	@Query("SELECT s FROM Snippet s JOIN FETCH s.language WHERE s.id = :id")
-	Optional<Snippet> findWithLanguageById(@Param("id") UUID id);
+	Optional<Snippet> findActiveById(@Param("id") UUID id);
 
 	@Query(value = """
 			SELECT s FROM Snippet s
