@@ -25,6 +25,6 @@ public class AuthController extends BaseController {
 	@PostMapping("/register")
 	public ResponseEntity<UserResponseDto> register(@Valid @RequestBody RegisterRequestDto dto) {
 		var response = authService.register(dto);
-		return new ResponseEntity<>(response, HttpStatus.CREATED);
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 }

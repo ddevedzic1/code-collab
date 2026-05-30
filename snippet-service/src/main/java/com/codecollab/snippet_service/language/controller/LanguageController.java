@@ -43,7 +43,7 @@ public class LanguageController extends BaseController {
 	@PostMapping
 	public ResponseEntity<LanguageResponseDto> create(@Valid @RequestBody LanguageCreateDto dto) {
 		var response = languageService.create(dto);
-		return new ResponseEntity<>(response, HttpStatus.CREATED);
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@PatchMapping("/{id}")
@@ -55,6 +55,6 @@ public class LanguageController extends BaseController {
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> softDelete(@PathVariable UUID id) {
 		languageService.softDelete(id);
-		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		return ResponseEntity.noContent().build();
 	}
 }

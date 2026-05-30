@@ -49,7 +49,7 @@ public class SnippetController extends BaseController {
 	@PostMapping
 	public ResponseEntity<SnippetResponseDto> create(@Valid @RequestBody SnippetCreateDto dto) {
 		var response = snippetService.create(dto);
-		return new ResponseEntity<>(response, HttpStatus.CREATED);
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@PatchMapping("/{id}")
@@ -61,6 +61,6 @@ public class SnippetController extends BaseController {
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> softDelete(@PathVariable UUID id) {
 		snippetService.softDelete(id);
-		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		return ResponseEntity.noContent().build();
 	}
 }
