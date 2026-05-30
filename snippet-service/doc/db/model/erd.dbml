@@ -1,3 +1,13 @@
+Enum share_type_enum {
+  PUBLIC_LINK
+  USER
+}
+
+Enum permission_enum {
+  READ_ONLY
+  EDIT
+}
+
 Table languages {
   id uuid [pk, default: `gen_random_uuid()`]
   code varchar(30) [not null, note: 'Slug; unique among active rows (end_date IS NULL OR end_date > NOW()) via trg_languages_unique_active_code']
@@ -28,5 +38,42 @@ Table snippets {
   indexes {
     user_id [name: 'idx_snippets_user_id']
     language_id [name: 'idx_snippets_language_id']
+  }
+}
+
+Table snippet_shares {
+  id uuid [pk, default: `gen_random_uuid()`]
+  snippet_id uuid [not null, ref: > snippets.id, note: 'Unique among active rows (one active share per snippet)']
+  share_token varchar(300) [not null, note: 'Stable URL token; unique among active rows']
+  share_type share_type_enum [not null]
+  permission permission_enum [not null, note: 'Global permission for PUBLIC_LINK. When share_type = USER, per-user permission from snippet_share_users takes precedence. Still required for PUBLIC_LINK access by non-listed users.']
+  start_date timestamp [not null, default: `now()`]
+  end_date timestamp
+  created_at timestamp [not null, default: `now()`]
+  created_by varchar(300)
+  updated_at timestamp [note: 'Maintained by trg_snippet_shares_set_updated_at trigger']
+  updated_by varchar(300)
+
+  indexes {
+    snippet_id [unique, name: 'idx_snippet_shares_snippet_id_active', note: 'Partial: WHERE end_date IS NULL']
+    share_token [unique, name: 'idx_snippet_shares_share_token_active', note: 'Partial: WHERE end_date IS NULL']
+  }
+}
+
+Table snippet_share_users {
+  id uuid [pk, default: `gen_random_uuid()`]
+  snippet_share_id uuid [not null, ref: > snippet_shares.id]
+  user_id uuid [not null, note: 'Logical reference to user-service users.id; no DB FK across services']
+  permission permission_enum [not null, note: 'Per-user override; takes precedence over snippet_shares.permission regardless of share_type']
+  start_date timestamp [not null, default: `now()`]
+  end_date timestamp
+  created_at timestamp [not null, default: `now()`]
+  created_by varchar(300)
+  updated_at timestamp [note: 'Maintained by trg_snippet_share_users_set_updated_at trigger']
+  updated_by varchar(300)
+
+  indexes {
+    (snippet_share_id, user_id) [unique, name: 'idx_snippet_share_users_share_user_active', note: 'Partial: WHERE end_date IS NULL']
+    user_id [name: 'idx_snippet_share_users_user_id_active', note: 'Partial: WHERE end_date IS NULL; supports lookups like list-shares-granted-to-user']
   }
 }
