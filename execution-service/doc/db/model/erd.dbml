@@ -1,0 +1,55 @@
+Enum execution_status_enum {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+Enum queue_status_enum {
+  WAITING
+  PROCESSING
+  DONE
+}
+
+Table executions {
+  id uuid [pk, default: `gen_random_uuid()`]
+  snippet_id uuid [not null, note: 'Logical reference to snippet-service snippets.id; no DB FK across services']
+  user_id uuid [not null, note: 'Logical reference to user-service users.id; no DB FK across services']
+  language_id uuid [not null, note: 'Logical reference to snippet-service languages.id; no DB FK across services']
+  code_snapshot text [not null, note: 'Snapshot of source code at submission time']
+  status execution_status_enum [not null, default: 'PENDING']
+  stdout text
+  stderr text
+  exit_code int
+  duration_ms int [note: 'Wall-clock execution time in milliseconds']
+  start_date timestamp [not null, default: `now()`]
+  end_date timestamp
+  created_at timestamp [not null, default: `now()`]
+  created_by varchar(300)
+  updated_at timestamp [note: 'Maintained by trg_executions_set_updated_at trigger']
+  updated_by varchar(300)
+
+  indexes {
+    user_id [name: 'idx_executions_user_id']
+    snippet_id [name: 'idx_executions_snippet_id']
+    status [name: 'idx_executions_status']
+  }
+}
+
+Table execution_queue {
+  id uuid [pk, default: `gen_random_uuid()`]
+  execution_id uuid [not null, ref: > executions.id]
+  status queue_status_enum [not null, default: 'WAITING']
+  priority int [not null, default: 0, note: 'Higher value processed first']
+  start_date timestamp [not null, default: `now()`]
+  end_date timestamp
+  created_at timestamp [not null, default: `now()`]
+  created_by varchar(300)
+  updated_at timestamp [note: 'Maintained by trg_execution_queue_set_updated_at trigger']
+  updated_by varchar(300)
+
+  indexes {
+    execution_id [name: 'idx_execution_queue_execution_id']
+    status [name: 'idx_execution_queue_status']
+  }
+}
