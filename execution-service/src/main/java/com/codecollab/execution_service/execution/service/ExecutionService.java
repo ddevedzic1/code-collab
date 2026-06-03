@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import com.codecollab.execution_service.client.snippet.SnippetClient;
+import com.codecollab.execution_service.client.snippet.SnippetClientDto;
 import com.codecollab.execution_service.exception.AppException;
 import com.codecollab.execution_service.execution.dto.ExecutionResponseDto;
 import com.codecollab.execution_service.execution.dto.ExecutionSubmitDto;
@@ -23,6 +25,7 @@ import com.codecollab.execution_service.execution.worker.ExecutionMessage;
 import com.codecollab.execution_service.service.BaseService;
 import com.codecollab.execution_service.util.PageResult;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,6 +37,7 @@ public class ExecutionService extends BaseService {
 	private final ExecutionRepository executionRepository;
 	private final ExecutionQueueRepository executionQueueRepository;
 	private final RabbitTemplate rabbitTemplate;
+	private final SnippetClient snippetClient;
 
 	@Value("${app.rabbitmq.execution.exchange}")
 	private String exchangeName;
@@ -48,11 +52,13 @@ public class ExecutionService extends BaseService {
 					"Execution submit reached service without userId; expected to be supplied by client or gateway");
 		}
 
+		var snippet = fetchSnippet(dto.getSnippetId(), dto.getUserId());
+
 		var execution = new Execution();
 		execution.setUserId(dto.getUserId());
-		execution.setSnippetId(dto.getSnippetId());
-		execution.setLanguageId(dto.getLanguageId());
-		execution.setCodeSnapshot(dto.getCodeSnapshot());
+		execution.setSnippetId(snippet.getId());
+		execution.setLanguageId(snippet.getLanguage().getId());
+		execution.setCodeSnapshot(snippet.getContent());
 		execution.setStatus(ExecutionStatus.PENDING);
 		var savedExecution = executionRepository.save(execution);
 
@@ -87,6 +93,40 @@ public class ExecutionService extends BaseService {
 		var page = executionRepository.search(userId, snippetId, status, pageable)
 				.map(execution -> modelMapper.map(execution, ExecutionResponseDto.class));
 		return PageResult.from(page);
+	}
+
+	private SnippetClientDto fetchSnippet(UUID snippetId, UUID callerUserId) {
+		try {
+			return snippetClient.getById(snippetId, callerUserId);
+		} catch (Exception ex) {
+			var feign = unwrapFeign(ex);
+			if (feign instanceof FeignException.NotFound) {
+				throw new AppException(AppException.NOT_FOUND_ERROR,
+						messages.get("error.execution.snippet.not.found"));
+			}
+			if (feign instanceof FeignException.Forbidden) {
+				throw new AppException(AppException.FORBIDDEN_ERROR,
+						messages.get("error.execution.snippet.forbidden"));
+			}
+			if (feign != null) {
+				log.warn("Snippet lookup returned status {} for snippet {}", feign.status(), snippetId);
+			} else {
+				log.warn("Snippet lookup failed [{}] for snippet {}: {}",
+						ex.getClass().getName(), snippetId, ex.getMessage());
+			}
+			throw new AppException(AppException.SERVICE_UNAVAILABLE_ERROR,
+					messages.get("error.system.unavailable"));
+		}
+	}
+
+	private static FeignException unwrapFeign(Throwable t) {
+		if (t instanceof FeignException fe) {
+			return fe;
+		}
+		if (t.getCause() instanceof FeignException fe) {
+			return fe;
+		}
+		return null;
 	}
 
 	private void publishAfterCommit(ExecutionMessage message) {
