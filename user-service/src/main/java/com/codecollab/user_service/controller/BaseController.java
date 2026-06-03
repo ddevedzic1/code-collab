@@ -106,6 +106,7 @@ public abstract class BaseController {
 			case AppException.NOT_FOUND_ERROR -> HttpStatus.NOT_FOUND;
 			case AppException.FORBIDDEN_ERROR -> HttpStatus.FORBIDDEN;
 			case AppException.VALIDATION_ERROR -> HttpStatus.BAD_REQUEST;
+			case AppException.SERVICE_UNAVAILABLE_ERROR -> HttpStatus.SERVICE_UNAVAILABLE;
 			case AppException.INTERNAL_ERROR, AppException.DATABASE_ERROR, AppException.INVALID_CLASS_NAME ->
 					HttpStatus.INTERNAL_SERVER_ERROR;
 			default -> HttpStatus.BAD_REQUEST;

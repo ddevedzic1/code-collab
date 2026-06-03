@@ -13,6 +13,7 @@ public class AppException extends RuntimeException {
 	public static final String INVALID_CLASS_NAME = "invalid-classname";
 	public static final String VALIDATION_ERROR = "validation-error";
 	public static final String NOT_FOUND_ERROR = "not-found";
+	public static final String SERVICE_UNAVAILABLE_ERROR = "service-unavailable";
 
 	private final String code;
 
