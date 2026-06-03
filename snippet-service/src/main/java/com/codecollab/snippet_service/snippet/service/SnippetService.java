@@ -38,10 +38,14 @@ public class SnippetService extends BaseService {
 	}
 
 	@Transactional(readOnly = true)
-	public SnippetResponseDto getById(UUID id) {
+	public SnippetResponseDto getById(UUID id, UUID callerUserId) {
 		var snippet = snippetRepository.findActiveById(id)
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.snippet.not.found")));
+		if (!snippet.getUserId().equals(callerUserId)) {
+			throw new AppException(AppException.FORBIDDEN_ERROR,
+					messages.get("error.snippet.forbidden"));
+		}
 		return modelMapper.map(snippet, SnippetResponseDto.class);
 	}
 
