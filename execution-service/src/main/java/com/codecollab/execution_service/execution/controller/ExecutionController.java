@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,22 +32,24 @@ public class ExecutionController extends BaseController {
 	private final ExecutionService executionService;
 
 	@PostMapping
-	public ResponseEntity<ExecutionResponseDto> submit(@Valid @RequestBody ExecutionSubmitDto dto) {
-		var response = executionService.submit(dto);
+	public ResponseEntity<ExecutionResponseDto> submit(@Valid @RequestBody ExecutionSubmitDto dto,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		var response = executionService.submit(dto, callerUserId);
 		return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
 	}
 
 	@GetMapping("/{id}")
-	public ResponseEntity<ExecutionResponseDto> getById(@PathVariable UUID id) {
-		return ResponseEntity.ok(executionService.getById(id));
+	public ResponseEntity<ExecutionResponseDto> getById(@PathVariable UUID id,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		return ResponseEntity.ok(executionService.getById(id, callerUserId));
 	}
 
 	@GetMapping
 	public ResponseEntity<PageResult<ExecutionResponseDto>> search(
-			@RequestParam UUID userId,
+			@RequestHeader("X-User-Id") UUID callerUserId,
 			@RequestParam(required = false) UUID snippetId,
 			@RequestParam(required = false) ExecutionStatus status,
 			Pageable pageable) {
-		return ResponseEntity.ok(executionService.search(userId, snippetId, status, pageable));
+		return ResponseEntity.ok(executionService.search(callerUserId, snippetId, status, pageable));
 	}
 }

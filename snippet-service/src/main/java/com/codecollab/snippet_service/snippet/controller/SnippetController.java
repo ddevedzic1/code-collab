@@ -35,11 +35,11 @@ public class SnippetController extends BaseController {
 
 	@GetMapping
 	public ResponseEntity<PageResult<SnippetResponseDto>> search(
-			@RequestParam UUID userId,
+			@RequestHeader("X-User-Id") UUID callerUserId,
 			@RequestParam(required = false) String title,
 			@RequestParam(required = false) UUID languageId,
 			Pageable pageable) {
-		return ResponseEntity.ok(snippetService.search(userId, title, languageId, pageable));
+		return ResponseEntity.ok(snippetService.search(callerUserId, title, languageId, pageable));
 	}
 
 	@GetMapping("/{id}")
@@ -50,20 +50,24 @@ public class SnippetController extends BaseController {
 	}
 
 	@PostMapping
-	public ResponseEntity<SnippetResponseDto> create(@Valid @RequestBody SnippetCreateDto dto) {
-		var response = snippetService.create(dto);
+	public ResponseEntity<SnippetResponseDto> create(
+			@Valid @RequestBody SnippetCreateDto dto,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		var response = snippetService.create(dto, callerUserId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@PatchMapping("/{id}")
 	public ResponseEntity<SnippetResponseDto> update(@PathVariable UUID id,
-			@Valid @RequestBody SnippetUpdateDto dto) {
-		return ResponseEntity.ok(snippetService.update(id, dto));
+			@Valid @RequestBody SnippetUpdateDto dto,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		return ResponseEntity.ok(snippetService.update(id, dto, callerUserId));
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> softDelete(@PathVariable UUID id) {
-		snippetService.softDelete(id);
+	public ResponseEntity<Void> softDelete(@PathVariable UUID id,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		snippetService.softDelete(id, callerUserId);
 		return ResponseEntity.noContent().build();
 	}
 }

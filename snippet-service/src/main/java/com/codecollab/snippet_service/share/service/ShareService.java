@@ -39,8 +39,8 @@ public class ShareService extends BaseService {
 	private final SnippetRepository snippetRepository;
 
 	@Transactional
-	public ShareResponseDto create(UUID snippetId, ShareCreateDto dto) {
-		var snippet = getActiveSnippet(snippetId);
+	public ShareResponseDto create(UUID snippetId, ShareCreateDto dto, UUID callerUserId) {
+		var snippet = getOwnedSnippet(snippetId, callerUserId);
 
 		if (snippetShareRepository.existsBySnippetId(snippetId)) {
 			throw new AppException(AppException.VALIDATION_ERROR,
@@ -59,20 +59,23 @@ public class ShareService extends BaseService {
 	}
 
 	@Transactional(readOnly = true)
-	public ShareResponseDto getBySnippetId(UUID snippetId) {
-		var share = getActiveShareBySnippetId(snippetId);
+	public ShareResponseDto getBySnippetId(UUID snippetId, UUID callerUserId) {
+		getOwnedSnippet(snippetId, callerUserId);
+		var share = snippetShareRepository.findBySnippetId(snippetId)
+				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
+						messages.get("error.share.not.found")));
 		return toShareResponseDto(share);
 	}
 
 	@Transactional(readOnly = true)
-	public ShareResponseDto getById(UUID shareId) {
-		var share = getActiveShare(shareId);
+	public ShareResponseDto getById(UUID shareId, UUID callerUserId) {
+		var share = getOwnedShare(shareId, callerUserId);
 		return toShareResponseDto(share);
 	}
 
 	@Transactional
-	public ShareResponseDto update(UUID shareId, ShareUpdateDto dto) {
-		var share = getActiveShare(shareId);
+	public ShareResponseDto update(UUID shareId, ShareUpdateDto dto, UUID callerUserId) {
+		var share = getOwnedShare(shareId, callerUserId);
 
 		if (dto.getShareType() != null) {
 			share.setShareType(dto.getShareType());
@@ -87,24 +90,24 @@ public class ShareService extends BaseService {
 	}
 
 	@Transactional
-	public void softDelete(UUID shareId) {
-		var share = getActiveShare(shareId);
+	public void softDelete(UUID shareId, UUID callerUserId) {
+		var share = getOwnedShare(shareId, callerUserId);
 		share.setEndDate(LocalDateTime.now());
 		snippetShareRepository.save(share);
 		log.info("Soft-deleted share {}", shareId);
 	}
 
 	@Transactional(readOnly = true)
-	public List<ShareUserResponseDto> getUsers(UUID shareId) {
-		getActiveShare(shareId);
+	public List<ShareUserResponseDto> getUsers(UUID shareId, UUID callerUserId) {
+		getOwnedShare(shareId, callerUserId);
 		return snippetShareUserRepository.findBySnippetShareId(shareId).stream()
 				.map(this::toUserResponseDto)
 				.toList();
 	}
 
 	@Transactional
-	public ShareUserResponseDto addUser(UUID shareId, ShareUserCreateDto dto) {
-		var share = getActiveShare(shareId);
+	public ShareUserResponseDto addUser(UUID shareId, ShareUserCreateDto dto, UUID callerUserId) {
+		var share = getOwnedShare(shareId, callerUserId);
 
 		if (snippetShareUserRepository.existsBySnippetShareIdAndUserId(share.getId(), dto.getUserId())) {
 			throw new AppException(AppException.VALIDATION_ERROR,
@@ -122,8 +125,8 @@ public class ShareService extends BaseService {
 	}
 
 	@Transactional
-	public void removeUser(UUID shareId, UUID userId) {
-		getActiveShare(shareId);
+	public void removeUser(UUID shareId, UUID userId, UUID callerUserId) {
+		getOwnedShare(shareId, callerUserId);
 		var shareUser = snippetShareUserRepository.findBySnippetShareIdAndUserId(shareId, userId)
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.share.user.not.found")));
@@ -133,8 +136,8 @@ public class ShareService extends BaseService {
 	}
 
 	@Transactional
-	public void removeAllUsers(UUID shareId) {
-		getActiveShare(shareId);
+	public void removeAllUsers(UUID shareId, UUID callerUserId) {
+		getOwnedShare(shareId, callerUserId);
 		var shareUsers = snippetShareUserRepository.findBySnippetShareId(shareId);
 		var now = LocalDateTime.now();
 		shareUsers.forEach(su -> su.setEndDate(now));
@@ -165,23 +168,26 @@ public class ShareService extends BaseService {
 		return toSharedSnippetResponseDto(snippet, effectivePermission);
 	}
 
-	private SnippetShare getActiveShare(UUID shareId) {
-		return snippetShareRepository.findById(shareId)
+	private SnippetShare getOwnedShare(UUID shareId, UUID callerUserId) {
+		var share = snippetShareRepository.findById(shareId)
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.share.not.found")));
+		if (!share.getSnippet().getUserId().equals(callerUserId)) {
+			throw new AppException(AppException.FORBIDDEN_ERROR,
+					messages.get("error.share.forbidden"));
+		}
+		return share;
 	}
 
-	private SnippetShare getActiveShareBySnippetId(UUID snippetId) {
-		getActiveSnippet(snippetId);
-		return snippetShareRepository.findBySnippetId(snippetId)
-				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
-						messages.get("error.share.not.found")));
-	}
-
-	private Snippet getActiveSnippet(UUID snippetId) {
-		return snippetRepository.findActiveById(snippetId)
+	private Snippet getOwnedSnippet(UUID snippetId, UUID callerUserId) {
+		var snippet = snippetRepository.findActiveById(snippetId)
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.snippet.not.found")));
+		if (!snippet.getUserId().equals(callerUserId)) {
+			throw new AppException(AppException.FORBIDDEN_ERROR,
+					messages.get("error.share.forbidden"));
+		}
+		return snippet;
 	}
 
 	private ShareResponseDto toShareResponseDto(SnippetShare share) {

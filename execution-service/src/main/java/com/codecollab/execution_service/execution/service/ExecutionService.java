@@ -46,16 +46,11 @@ public class ExecutionService extends BaseService {
 	private String routingKey;
 
 	@Transactional
-	public ExecutionResponseDto submit(ExecutionSubmitDto dto) {
-		if (dto.getUserId() == null) {
-			throw new AppException(AppException.INTERNAL_ERROR,
-					"Execution submit reached service without userId; expected to be supplied by client or gateway");
-		}
-
-		var snippet = fetchSnippet(dto.getSnippetId(), dto.getUserId());
+	public ExecutionResponseDto submit(ExecutionSubmitDto dto, UUID callerUserId) {
+		var snippet = fetchSnippet(dto.getSnippetId(), callerUserId);
 
 		var execution = new Execution();
-		execution.setUserId(dto.getUserId());
+		execution.setUserId(callerUserId);
 		execution.setSnippetId(snippet.getId());
 		execution.setLanguageId(snippet.getLanguage().getId());
 		execution.setCodeSnapshot(snippet.getContent());
@@ -76,21 +71,21 @@ public class ExecutionService extends BaseService {
 	}
 
 	@Transactional(readOnly = true)
-	public ExecutionResponseDto getById(UUID id) {
+	public ExecutionResponseDto getById(UUID id, UUID callerUserId) {
 		var execution = executionRepository.findById(id)
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.execution.not.found")));
+		if (!execution.getUserId().equals(callerUserId)) {
+			throw new AppException(AppException.FORBIDDEN_ERROR,
+					messages.get("error.execution.forbidden"));
+		}
 		return modelMapper.map(execution, ExecutionResponseDto.class);
 	}
 
 	@Transactional(readOnly = true)
-	public PageResult<ExecutionResponseDto> search(UUID userId, UUID snippetId, ExecutionStatus status,
+	public PageResult<ExecutionResponseDto> search(UUID callerUserId, UUID snippetId, ExecutionStatus status,
 			Pageable pageable) {
-		if (userId == null) {
-			throw new AppException(AppException.INTERNAL_ERROR,
-					"Execution search reached service without userId; expected to be supplied by client or gateway");
-		}
-		var page = executionRepository.search(userId, snippetId, status, pageable)
+		var page = executionRepository.search(callerUserId, snippetId, status, pageable)
 				.map(execution -> modelMapper.map(execution, ExecutionResponseDto.class));
 		return PageResult.from(page);
 	}

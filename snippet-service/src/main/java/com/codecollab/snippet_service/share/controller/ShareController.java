@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.codecollab.snippet_service.controller.BaseController;
@@ -36,60 +36,69 @@ public class ShareController extends BaseController {
 
 	@PostMapping("/snippets/{snippetId}/share")
 	public ResponseEntity<ShareResponseDto> create(@PathVariable UUID snippetId,
-			@Valid @RequestBody ShareCreateDto dto) {
-		var response = shareService.create(snippetId, dto);
+			@Valid @RequestBody ShareCreateDto dto,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		var response = shareService.create(snippetId, dto, callerUserId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@GetMapping("/snippets/{snippetId}/share")
-	public ResponseEntity<ShareResponseDto> getBySnippetId(@PathVariable UUID snippetId) {
-		return ResponseEntity.ok(shareService.getBySnippetId(snippetId));
+	public ResponseEntity<ShareResponseDto> getBySnippetId(@PathVariable UUID snippetId,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		return ResponseEntity.ok(shareService.getBySnippetId(snippetId, callerUserId));
 	}
 
 	@GetMapping("/shares/{shareId}")
-	public ResponseEntity<ShareResponseDto> getById(@PathVariable UUID shareId) {
-		return ResponseEntity.ok(shareService.getById(shareId));
+	public ResponseEntity<ShareResponseDto> getById(@PathVariable UUID shareId,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		return ResponseEntity.ok(shareService.getById(shareId, callerUserId));
 	}
 
 	@PatchMapping("/shares/{shareId}")
 	public ResponseEntity<ShareResponseDto> update(@PathVariable UUID shareId,
-			@Valid @RequestBody ShareUpdateDto dto) {
-		return ResponseEntity.ok(shareService.update(shareId, dto));
+			@Valid @RequestBody ShareUpdateDto dto,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		return ResponseEntity.ok(shareService.update(shareId, dto, callerUserId));
 	}
 
 	@DeleteMapping("/shares/{shareId}")
-	public ResponseEntity<Void> softDelete(@PathVariable UUID shareId) {
-		shareService.softDelete(shareId);
+	public ResponseEntity<Void> softDelete(@PathVariable UUID shareId,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		shareService.softDelete(shareId, callerUserId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@GetMapping("/shares/{shareId}/users")
-	public ResponseEntity<List<ShareUserResponseDto>> getUsers(@PathVariable UUID shareId) {
-		return ResponseEntity.ok(shareService.getUsers(shareId));
+	public ResponseEntity<List<ShareUserResponseDto>> getUsers(@PathVariable UUID shareId,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		return ResponseEntity.ok(shareService.getUsers(shareId, callerUserId));
 	}
 
 	@PostMapping("/shares/{shareId}/users")
 	public ResponseEntity<ShareUserResponseDto> addUser(@PathVariable UUID shareId,
-			@Valid @RequestBody ShareUserCreateDto dto) {
-		var response = shareService.addUser(shareId, dto);
+			@Valid @RequestBody ShareUserCreateDto dto,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		var response = shareService.addUser(shareId, dto, callerUserId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@DeleteMapping("/shares/{shareId}/users/{userId}")
-	public ResponseEntity<Void> removeUser(@PathVariable UUID shareId, @PathVariable UUID userId) {
-		shareService.removeUser(shareId, userId);
+	public ResponseEntity<Void> removeUser(@PathVariable UUID shareId, @PathVariable UUID userId,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		shareService.removeUser(shareId, userId, callerUserId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@DeleteMapping("/shares/{shareId}/users")
-	public ResponseEntity<Void> removeAllUsers(@PathVariable UUID shareId) {
-		shareService.removeAllUsers(shareId);
+	public ResponseEntity<Void> removeAllUsers(@PathVariable UUID shareId,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		shareService.removeAllUsers(shareId, callerUserId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@GetMapping("/shares/by-token/{token}")
 	public ResponseEntity<SharedSnippetResponseDto> getByToken(@PathVariable String token,
-			@RequestParam(required = false) UUID userId) {
-		return ResponseEntity.ok(shareService.getByToken(token, userId));
+			@RequestHeader(value = "X-User-Id", required = false) UUID callerUserId) {
+		return ResponseEntity.ok(shareService.getByToken(token, callerUserId));
 	}
 }

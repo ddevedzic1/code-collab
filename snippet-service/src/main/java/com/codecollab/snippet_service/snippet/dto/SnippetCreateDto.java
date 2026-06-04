@@ -10,8 +10,6 @@ import lombok.Data;
 @Data
 public class SnippetCreateDto {
 
-	private UUID userId;
-
 	@NotNull(message = "{validation.snippet.languageId.required}")
 	private UUID languageId;
 

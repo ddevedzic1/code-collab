@@ -30,36 +30,25 @@ public class SnippetService extends BaseService {
 	private final LanguageRepository languageRepository;
 
 	@Transactional(readOnly = true)
-	public PageResult<SnippetResponseDto> search(UUID userId, String title, UUID languageId, Pageable pageable) {
+	public PageResult<SnippetResponseDto> search(UUID callerUserId, String title, UUID languageId, Pageable pageable) {
 		var titlePattern = (title == null || title.isBlank()) ? null : "%" + title.toLowerCase() + "%";
-		var page = snippetRepository.search(userId, titlePattern, languageId, pageable)
+		var page = snippetRepository.search(callerUserId, titlePattern, languageId, pageable)
 				.map(snippet -> modelMapper.map(snippet, SnippetResponseDto.class));
 		return PageResult.from(page);
 	}
 
 	@Transactional(readOnly = true)
 	public SnippetResponseDto getById(UUID id, UUID callerUserId) {
-		var snippet = snippetRepository.findActiveById(id)
-				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
-						messages.get("error.snippet.not.found")));
-		if (!snippet.getUserId().equals(callerUserId)) {
-			throw new AppException(AppException.FORBIDDEN_ERROR,
-					messages.get("error.snippet.forbidden"));
-		}
+		var snippet = findOwnedSnippet(id, callerUserId);
 		return modelMapper.map(snippet, SnippetResponseDto.class);
 	}
 
 	@Transactional
-	public SnippetResponseDto create(SnippetCreateDto dto) {
-		if (dto.getUserId() == null) {
-			throw new AppException(AppException.INTERNAL_ERROR,
-					"Snippet create reached service without userId; expected to be supplied by client or gateway");
-		}
-
+	public SnippetResponseDto create(SnippetCreateDto dto, UUID callerUserId) {
 		var language = findActiveLanguage(dto.getLanguageId());
 
 		var snippet = new Snippet();
-		snippet.setUserId(dto.getUserId());
+		snippet.setUserId(callerUserId);
 		snippet.setLanguage(language);
 		snippet.setTitle(dto.getTitle());
 		snippet.setContent(dto.getContent() != null ? dto.getContent() : "");
@@ -70,8 +59,8 @@ public class SnippetService extends BaseService {
 	}
 
 	@Transactional
-	public SnippetResponseDto update(UUID id, SnippetUpdateDto dto) {
-		var snippet = getActiveSnippet(id);
+	public SnippetResponseDto update(UUID id, SnippetUpdateDto dto, UUID callerUserId) {
+		var snippet = findOwnedSnippet(id, callerUserId);
 
 		if (dto.getLanguageId() != null && !dto.getLanguageId().equals(snippet.getLanguage().getId())) {
 			snippet.setLanguage(findActiveLanguage(dto.getLanguageId()));
@@ -89,17 +78,22 @@ public class SnippetService extends BaseService {
 	}
 
 	@Transactional
-	public void softDelete(UUID id) {
-		var snippet = getActiveSnippet(id);
+	public void softDelete(UUID id, UUID callerUserId) {
+		var snippet = findOwnedSnippet(id, callerUserId);
 		snippet.setEndDate(LocalDateTime.now());
 		snippetRepository.save(snippet);
 		log.info("Soft-deleted snippet {}", id);
 	}
 
-	private Snippet getActiveSnippet(UUID id) {
-		return snippetRepository.findActiveById(id)
+	private Snippet findOwnedSnippet(UUID id, UUID callerUserId) {
+		var snippet = snippetRepository.findActiveById(id)
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.snippet.not.found")));
+		if (!snippet.getUserId().equals(callerUserId)) {
+			throw new AppException(AppException.FORBIDDEN_ERROR,
+					messages.get("error.snippet.forbidden"));
+		}
+		return snippet;
 	}
 
 	private Language findActiveLanguage(UUID languageId) {
