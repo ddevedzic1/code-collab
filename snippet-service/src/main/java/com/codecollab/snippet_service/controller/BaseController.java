@@ -105,6 +105,7 @@ public abstract class BaseController {
 		return switch (code) {
 			case AppException.NOT_FOUND_ERROR -> HttpStatus.NOT_FOUND;
 			case AppException.FORBIDDEN_ERROR -> HttpStatus.FORBIDDEN;
+			case AppException.UNAUTHORIZED_ERROR -> HttpStatus.UNAUTHORIZED;
 			case AppException.VALIDATION_ERROR -> HttpStatus.BAD_REQUEST;
 			case AppException.SERVICE_UNAVAILABLE_ERROR -> HttpStatus.SERVICE_UNAVAILABLE;
 			case AppException.INTERNAL_ERROR, AppException.DATABASE_ERROR, AppException.INVALID_CLASS_NAME ->
