@@ -24,13 +24,13 @@ public class UserService extends BaseService {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 
-	public UserResponseDto getById(UUID id) {
-		var user = findActiveById(id);
+	public UserResponseDto getById(UUID id, UUID callerUserId) {
+		var user = findOwnedUser(id, callerUserId);
 		return modelMapper.map(user, UserResponseDto.class);
 	}
 
-	public UserResponseDto update(UUID id, UserUpdateDto dto) {
-		var user = findActiveById(id);
+	public UserResponseDto update(UUID id, UserUpdateDto dto, UUID callerUserId) {
+		var user = findOwnedUser(id, callerUserId);
 
 		if (dto.getUsername() != null && !dto.getUsername().equals(user.getUsername())) {
 			if (userRepository.existsByUsername(dto.getUsername())) {
@@ -49,14 +49,18 @@ public class UserService extends BaseService {
 		return modelMapper.map(saved, UserResponseDto.class);
 	}
 
-	public void softDelete(UUID id) {
-		var user = findActiveById(id);
+	public void softDelete(UUID id, UUID callerUserId) {
+		var user = findOwnedUser(id, callerUserId);
 		user.setEndDate(LocalDateTime.now());
 		userRepository.save(user);
 		log.info("Soft-deleted user {}", id);
 	}
 
-	private User findActiveById(UUID id) {
+	private User findOwnedUser(UUID id, UUID callerUserId) {
+		if (!id.equals(callerUserId)) {
+			throw new AppException(AppException.FORBIDDEN_ERROR,
+					messages.get("error.user.forbidden"));
+		}
 		return userRepository.findById(id)
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.user.not.found")));

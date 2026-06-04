@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,18 +28,22 @@ public class UserController extends BaseController {
 	private final UserService userService;
 
 	@GetMapping("/{id}")
-	public ResponseEntity<UserResponseDto> getById(@PathVariable UUID id) {
-		return ResponseEntity.ok(userService.getById(id));
+	public ResponseEntity<UserResponseDto> getById(@PathVariable UUID id,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		return ResponseEntity.ok(userService.getById(id, callerUserId));
 	}
 
 	@PatchMapping("/{id}")
-	public ResponseEntity<UserResponseDto> update(@PathVariable UUID id, @Valid @RequestBody UserUpdateDto dto) {
-		return ResponseEntity.ok(userService.update(id, dto));
+	public ResponseEntity<UserResponseDto> update(@PathVariable UUID id,
+			@Valid @RequestBody UserUpdateDto dto,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		return ResponseEntity.ok(userService.update(id, dto, callerUserId));
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> softDelete(@PathVariable UUID id) {
-		userService.softDelete(id);
+	public ResponseEntity<Void> softDelete(@PathVariable UUID id,
+			@RequestHeader("X-User-Id") UUID callerUserId) {
+		userService.softDelete(id, callerUserId);
 		return ResponseEntity.noContent().build();
 	}
 }
