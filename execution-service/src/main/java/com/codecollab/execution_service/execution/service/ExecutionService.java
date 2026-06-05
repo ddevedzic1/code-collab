@@ -15,6 +15,7 @@ import com.codecollab.execution_service.client.snippet.SnippetClientDto;
 import com.codecollab.execution_service.exception.AppException;
 import com.codecollab.execution_service.execution.dto.ExecutionResponseDto;
 import com.codecollab.execution_service.execution.dto.ExecutionSubmitDto;
+import com.codecollab.execution_service.execution.model.AuditState;
 import com.codecollab.execution_service.execution.model.Execution;
 import com.codecollab.execution_service.execution.model.ExecutionQueue;
 import com.codecollab.execution_service.execution.model.ExecutionStatus;
@@ -55,6 +56,7 @@ public class ExecutionService extends BaseService {
 		execution.setLanguageId(snippet.getLanguage().getId());
 		execution.setCodeSnapshot(snippet.getContent());
 		execution.setStatus(ExecutionStatus.PENDING);
+		execution.setAuditState(AuditState.PENDING_AUDIT);
 		var savedExecution = executionRepository.save(execution);
 
 		var queueEntry = new ExecutionQueue();

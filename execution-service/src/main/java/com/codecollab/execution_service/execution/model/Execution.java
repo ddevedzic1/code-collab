@@ -46,6 +46,10 @@ public class Execution {
 	@Column(name = "status", nullable = false, length = 30)
 	private ExecutionStatus status;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "audit_state", nullable = false, length = 30)
+	private AuditState auditState;
+
 	@Column(name = "stdout", columnDefinition = "TEXT")
 	private String stdout;
 

@@ -5,10 +5,13 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.codecollab.execution_service.execution.model.Execution;
 import com.codecollab.execution_service.execution.model.ExecutionStatus;
 import com.codecollab.execution_service.execution.model.QueueStatus;
 import com.codecollab.execution_service.execution.repository.ExecutionQueueRepository;
 import com.codecollab.execution_service.execution.repository.ExecutionRepository;
+import com.codecollab.execution_service.execution.saga.ExecutionFinalizedEvent;
+import com.codecollab.execution_service.execution.saga.SagaEventPublisher;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +23,7 @@ public class ExecutionPhaseService {
 
 	private final ExecutionRepository executionRepository;
 	private final ExecutionQueueRepository executionQueueRepository;
+	private final SagaEventPublisher sagaEventPublisher;
 
 	@Transactional
 	public boolean markRunning(UUID executionId) {
@@ -54,6 +58,8 @@ public class ExecutionPhaseService {
 			queueEntry.setStatus(QueueStatus.DONE);
 			executionQueueRepository.save(queueEntry);
 		});
+
+		publishFinalized(execution);
 	}
 
 	@Transactional
@@ -69,5 +75,18 @@ public class ExecutionPhaseService {
 			queueEntry.setStatus(QueueStatus.DONE);
 			executionQueueRepository.save(queueEntry);
 		});
+
+		publishFinalized(execution);
+	}
+
+	private void publishFinalized(Execution execution) {
+		var event = new ExecutionFinalizedEvent(
+				execution.getId(),
+				execution.getUserId(),
+				execution.getSnippetId(),
+				execution.getStatus().name(),
+				execution.getExitCode(),
+				execution.getDurationMs());
+		sagaEventPublisher.publishExecutionFinalized(event);
 	}
 }

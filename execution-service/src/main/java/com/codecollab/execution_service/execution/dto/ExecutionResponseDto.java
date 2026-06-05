@@ -2,6 +2,7 @@ package com.codecollab.execution_service.execution.dto;
 
 import java.util.UUID;
 
+import com.codecollab.execution_service.execution.model.AuditState;
 import com.codecollab.execution_service.execution.model.ExecutionStatus;
 
 import lombok.Data;
@@ -15,6 +16,7 @@ public class ExecutionResponseDto {
 	private UUID languageId;
 	private String codeSnapshot;
 	private ExecutionStatus status;
+	private AuditState auditState;
 	private String stdout;
 	private String stderr;
 	private Integer exitCode;

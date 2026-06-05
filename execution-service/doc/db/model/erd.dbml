@@ -11,6 +11,12 @@ Enum queue_status_enum {
   DONE
 }
 
+Enum audit_state_enum {
+  PENDING_AUDIT
+  FINALIZED
+  AUDIT_FAILED
+}
+
 Table executions {
   id uuid [pk, default: `gen_random_uuid()`]
   snippet_id uuid [not null, note: 'Logical reference to snippet-service snippets.id; no DB FK across services']
@@ -18,6 +24,7 @@ Table executions {
   language_id uuid [not null, note: 'Logical reference to snippet-service languages.id; no DB FK across services']
   code_snapshot text [not null, note: 'Snapshot of source code at submission time']
   status execution_status_enum [not null, default: 'PENDING']
+  audit_state audit_state_enum [not null, default: 'FINALIZED', note: 'Saga state for the execution-finalization audit choreography']
   stdout text
   stderr text
   exit_code int
