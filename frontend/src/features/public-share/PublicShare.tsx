@@ -1,0 +1,156 @@
+import { useEffect, useState } from 'react';
+import {
+  Badge,
+  Box,
+  Center,
+  Flex,
+  Heading,
+  HStack,
+  Tag,
+  Text,
+  useToast,
+} from '@chakra-ui/react';
+import { FiEdit2, FiEye, FiLock } from 'react-icons/fi';
+import { CodeEditor } from '../../components/CodeEditor';
+import { LoadingButton } from '../../components/LoadingButton';
+import { Spinner } from '../../components/Spinner';
+import { useSharedSnippet } from '../../hooks/useSharedSnippet';
+import { snippetsApi } from '../../api/snippetsApi';
+import { errorToast, successToast } from '../../components/toast';
+import { isAppError } from '../../lib/normalizeError';
+import { Permission } from '../../types/share';
+
+interface PublicShareProps {
+  token: string;
+}
+
+export const PublicShare = ({ token }: PublicShareProps) => {
+  const toast = useToast();
+  const { shared, loading, error } = useSharedSnippet(token);
+
+  const [content, setContent] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (shared) {
+      setContent(shared.content);
+    }
+  }, [shared]);
+
+  if (loading) {
+    return <Spinner full label="Loading shared snippet…" />;
+  }
+
+  if (error || !shared) {
+    const isForbidden = isAppError(error) && error.status === 403;
+    const isNotFound = isAppError(error) && error.status === 404;
+    return (
+      <Center minH="100vh" px={4}>
+        <Box
+          textAlign="center"
+          maxW="420px"
+          bg="gray.800"
+          borderWidth="1px"
+          borderColor="gray.700"
+          borderRadius="lg"
+          p={8}
+        >
+          <Center mb={3} color="textColor.medium">
+            <FiLock size={28} />
+          </Center>
+          <Heading size="md" mb={2}>
+            {isForbidden
+              ? 'No access'
+              : isNotFound
+                ? 'Snippet not found'
+                : 'Unable to load snippet'}
+          </Heading>
+          <Text fontSize="sm" color="textColor.medium">
+            {isForbidden
+              ? 'You do not have permission to view this shared snippet.'
+              : isNotFound
+                ? 'This share link is invalid or has been removed.'
+                : (error?.message ?? 'Please try again later.')}
+          </Text>
+        </Box>
+      </Center>
+    );
+  }
+
+  const canEdit = shared.permission === Permission.EDIT;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await snippetsApi.updateSnippet(shared.snippetId, { content });
+      toast(successToast('Changes saved.'));
+    } catch (err) {
+      if (isAppError(err)) {
+        toast(errorToast(err));
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Flex direction="column" h="100vh">
+      <Flex
+        align="center"
+        px={6}
+        h="56px"
+        borderBottomWidth="1px"
+        borderColor="gray.700"
+        bg="gray.800"
+        flexShrink={0}
+        gap={3}
+      >
+        <HStack spacing={2}>
+          <Box color="brand.500" fontWeight="bold">
+            {'</>'}
+          </Box>
+          <Heading size="sm" noOfLines={1}>
+            {shared.title || 'Shared snippet'}
+          </Heading>
+        </HStack>
+
+        <Badge
+          colorScheme="blue"
+          variant="subtle"
+          textTransform="none"
+          fontWeight="normal"
+        >
+          {shared.language?.name ?? 'Unknown'}
+        </Badge>
+
+        <Tag
+          size="sm"
+          colorScheme={canEdit ? 'green' : 'gray'}
+          variant="subtle"
+          gap={1}
+        >
+          {canEdit ? <FiEdit2 /> : <FiEye />}
+          {canEdit ? 'Can edit' : 'Read only'}
+        </Tag>
+
+        <Box flex="1" />
+
+        {canEdit ? (
+          <LoadingButton colorScheme="blue" onClick={handleSave} isLoading={saving}>
+            Save
+          </LoadingButton>
+        ) : null}
+      </Flex>
+
+      <Box flex="1" p={4} overflow="hidden">
+        <CodeEditor
+          value={content}
+          onChange={canEdit ? setContent : undefined}
+          languageCode={shared.language?.code}
+          readOnly={!canEdit}
+          height="100%"
+        />
+      </Box>
+    </Flex>
+  );
+};
