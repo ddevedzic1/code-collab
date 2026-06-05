@@ -1,0 +1,30 @@
+Enum action_type_enum {
+  CREATE
+  UPDATE
+  DELETE
+  GET
+  EXECUTE
+}
+
+Enum response_type_enum {
+  SUCCESS
+  ERROR
+}
+
+Table system_events {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [note: 'Logical reference to user-service users.id; no DB FK across services; NULL for system-initiated events']
+  microservice varchar(300) [not null, note: 'Name of the microservice that produced the event']
+  action_type action_type_enum [not null]
+  resource varchar(300) [not null, note: 'Identifier of the affected resource, typically a domain entity UUID']
+  response_type response_type_enum [not null]
+  details text [note: 'Optional free-form or JSON details']
+  created_at timestamp [not null, default: `now()`]
+  created_by varchar(300)
+
+  indexes {
+    user_id [name: 'idx_system_events_user_id']
+    resource [name: 'idx_system_events_resource']
+    (resource, action_type) [unique, name: 'idx_system_events_execute_resource_unique', note: 'Partial: WHERE action_type = EXECUTE; enforces idempotent audit per execution']
+  }
+}
