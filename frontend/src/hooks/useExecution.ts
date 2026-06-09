@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { executionsApi } from '../api/executionsApi';
-import { isAppError } from '../lib/normalizeError';
+import { isAppError, isHandledGlobally } from '../lib/normalizeError';
 import {
   isTerminalStatus,
   type Execution,
@@ -20,16 +20,7 @@ interface UseExecutionResult {
   loadExisting: (execution: Execution) => void;
 }
 
-/**
- * Manages running a snippet and polling its execution until a terminal state.
- *
- * Polling uses a recursive setTimeout (never setInterval) so requests never
- * overlap. Several refs guard against the classic async hazards:
- *  - mountedRef:    stop all state updates after unmount
- *  - timeoutRef:    only ever one scheduled poll
- *  - abortRef:      cancel the in-flight GET on teardown / replacement
- *  - currentIdRef:  drop stale responses when the tracked execution changes
- */
+/** Runs a snippet and polls its execution until it reaches a terminal state. */
 export const useExecution = (snippetId: string | undefined): UseExecutionResult => {
   const [execution, setExecution] = useState<Execution | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -85,8 +76,7 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
         if (!mountedRef.current || id !== currentIdRef.current) {
           return;
         }
-        // 401 is handled globally (auth context redirects); don't surface it.
-        if (isAppError(err) && err.status === 401) {
+        if (isHandledGlobally(err)) {
           setIsRunning(false);
           return;
         }
@@ -127,7 +117,7 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
         if (!mountedRef.current) {
           return;
         }
-        if (isAppError(err) && err.status === 401) {
+        if (isHandledGlobally(err)) {
           setIsRunning(false);
           return;
         }
@@ -160,7 +150,6 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
     [pollOnce, stopPolling]
   );
 
-  // Reset everything when the editor switches to a different snippet.
   useEffect(() => {
     stopPolling();
     currentIdRef.current = undefined;
@@ -169,7 +158,6 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
     setError(null);
   }, [snippetId, stopPolling]);
 
-  // Track mount state and tear down on unmount.
   useEffect(() => {
     mountedRef.current = true;
     return () => {

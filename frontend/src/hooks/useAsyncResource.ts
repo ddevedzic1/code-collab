@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import { isHandledGlobally } from '../lib/normalizeError';
 import type { AppError } from '../types/api';
 
 interface UseAsyncResourceOptions {
-  /**
-   * Suppress 401 errors (the global auth handler already redirects on those).
-   * Defaults to true; set false on public endpoints where a 401 is meaningful.
-   */
+  /** Suppress errors handled by the global auth flow. Defaults to true. */
   suppressUnauthorized?: boolean;
 }
 
@@ -19,17 +17,8 @@ export interface AsyncResource<T> {
 }
 
 /**
- * Generic data-fetching hook shared by the resource hooks. It owns the
- * recurring boilerplate: the `active` guard against stale/unmounted updates,
- * loading/error state, and 401 suppression.
- *
- * Pass `fetcher: null` to disable the fetch (e.g. a missing id or a deferred
- * `enabled` flag); the hook then stays idle with `loading === false`.
- *
- * `deps` controls when a refetch fires — exactly like a `useEffect` dependency
- * array. The fetcher is intentionally not part of the dependency contract, so
- * callers pass a value-based key (id, serialized params) instead of worrying
- * about the fetcher's identity.
+ * Generic data-fetching hook: owns loading/error state, the active guard, and
+ * 401 suppression. Pass `fetcher: null` to disable; `deps` drives refetches.
  */
 export const useAsyncResource = <T>(
   fetcher: (() => Promise<T>) | null,
@@ -58,7 +47,7 @@ export const useAsyncResource = <T>(
         }
       })
       .catch((err: AppError) => {
-        if (active && !(suppressUnauthorized && err.status === 401)) {
+        if (active && !(suppressUnauthorized && isHandledGlobally(err))) {
           setError(err);
         }
       })
@@ -71,8 +60,6 @@ export const useAsyncResource = <T>(
     return () => {
       active = false;
     };
-    // The fetcher's identity is deliberately excluded; callers drive refetches
-    // through `deps` (id / serialized params / enabled flag).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 

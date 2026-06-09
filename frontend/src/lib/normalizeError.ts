@@ -83,3 +83,13 @@ export const isAppError = (value: unknown): value is AppError => {
     typeof (value as Record<string, unknown>).isNetwork === 'boolean'
   );
 };
+
+/**
+ * True when an error is already handled by the global auth flow and should not
+ * be surfaced locally. A 401 triggers the axios interceptor's session-expired
+ * event, which clears auth and redirects; re-displaying it in a hook would just
+ * produce a duplicate, soon-to-be-unmounted error. Hooks suppress these.
+ */
+export const isHandledGlobally = (error: unknown): boolean => {
+  return isAppError(error) && error.status === 401;
+};

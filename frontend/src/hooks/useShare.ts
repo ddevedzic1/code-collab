@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { sharesApi } from '../api/sharesApi';
+import { isHandledGlobally } from '../lib/normalizeError';
 import type {
   Share,
   ShareCreateRequest,
@@ -19,11 +20,7 @@ interface UseShareResult {
   deleteShare: () => Promise<void>;
 }
 
-/**
- * Loads and mutates the single active share for a snippet.
- * `enabled` defers the initial probe until the share modal is opened.
- * A 404 from the backend maps to the `none` state (handled in sharesApi).
- */
+/** Loads and mutates the single active share for a snippet. */
 export const useShare = (
   snippetId: string | undefined,
   enabled: boolean
@@ -53,7 +50,7 @@ export const useShare = (
         if (!active) {
           return;
         }
-        if (err.status === 401) {
+        if (isHandledGlobally(err)) {
           return;
         }
         setError(err);
