@@ -8,7 +8,7 @@ import { useAuth } from '../../context/auth/useAuth';
 import { useUser } from '../../hooks/useUser';
 
 export const Account = () => {
-  const { user: authUser } = useAuth();
+  const { user: authUser, patchUser } = useAuth();
   const { user, loading, error, updateUser, deleteUser } = useUser(authUser?.id);
 
   return (
@@ -24,7 +24,7 @@ export const Account = () => {
           <ProfileSection
             user={user}
             onUpdate={updateUser}
-            onUsernameChanged={() => undefined}
+            onUsernameChanged={username => patchUser({ username })}
           />
           <PasswordSection onUpdate={updateUser} />
           <DangerZone onDelete={deleteUser} />

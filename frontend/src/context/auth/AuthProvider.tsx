@@ -119,6 +119,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     [login]
   );
 
+  const patchUser = useCallback((changes: Partial<AuthUser>): void => {
+    setUser(current => (current ? { ...current, ...changes } : current));
+  }, []);
+
   const logout = useCallback(async (): Promise<void> => {
     try {
       await authApi.logout();
@@ -135,7 +139,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ status, user, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ status, user, login, register, logout, patchUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
