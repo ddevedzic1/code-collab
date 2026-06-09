@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Flex, useDisclosure, useToast } from '@chakra-ui/react';
+import { Box, Flex, useDisclosure } from '@chakra-ui/react';
 import { EditorTopBar } from './components/EditorTopBar';
 import { RightPanelTabs } from './components/RightPanelTabs';
 import { ShareModal } from './share-modal/ShareModal';
@@ -8,9 +8,8 @@ import { Spinner } from '../../components/Spinner';
 import { ErrorMessage } from '../../components/ErrorMessage';
 import { useSnippet } from '../../hooks/useSnippet';
 import { useExecution } from '../../hooks/useExecution';
+import { useSubmit } from '../../hooks/useSubmit';
 import { snippetsApi } from '../../api/snippetsApi';
-import { errorToast, successToast } from '../../components/toast';
-import { isAppError } from '../../lib/normalizeError';
 import { useLanguages } from '../../hooks/useLanguages';
 import { isTerminalStatus } from '../../types/execution';
 import type { Execution } from '../../types/execution';
@@ -24,14 +23,13 @@ interface EditorViewProps {
 }
 
 const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
-  const toast = useToast();
   const shareModal = useDisclosure();
   const { languages } = useLanguages();
 
   const [title, setTitle] = useState(snippet.title);
   const [content, setContent] = useState(snippet.content);
   const [languageId, setLanguageId] = useState(snippet.language.id);
-  const [saving, setSaving] = useState(false);
+  const { submitting: saving, run: runSave } = useSubmit();
 
   const [tabIndex, setTabIndex] = useState(OUTPUT_TAB);
   const [historyRefreshToken, setHistoryRefreshToken] = useState(0);
@@ -57,34 +55,27 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
   );
 
   const handleSave = useCallback(async () => {
-    if (saving || !isDirty) {
-      return;
-    }
-    setSaving(true);
-    try {
-      const updated = await snippetsApi.updateSnippet(snippet.id, {
-        title: title.trim(),
-        content,
-        languageId,
-      });
-      onSnippetSaved(updated);
-      toast(successToast('Snippet saved.'));
-    } catch (error) {
-      if (isAppError(error)) {
-        toast(errorToast(error));
+    await runSave(
+      () =>
+        snippetsApi.updateSnippet(snippet.id, {
+          title: title.trim(),
+          content,
+          languageId,
+        }),
+      {
+        guard: () => isDirty,
+        successMessage: 'Snippet saved.',
+        onSuccess: updated => onSnippetSaved(updated),
       }
-    } finally {
-      setSaving(false);
-    }
+    );
   }, [
-    saving,
+    runSave,
     isDirty,
     snippet.id,
     title,
     content,
     languageId,
     onSnippetSaved,
-    toast,
   ]);
 
   const handleRun = useCallback(async () => {

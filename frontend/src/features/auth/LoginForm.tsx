@@ -8,15 +8,13 @@ import {
   Link,
   Text,
   VStack,
-  useToast,
 } from '@chakra-ui/react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { AuthCard } from './components/AuthCard';
 import { LoadingButton } from '../../components/LoadingButton';
 import { useAuth } from '../../context/auth/useAuth';
-import { errorToast } from '../../components/toast';
+import { useSubmit } from '../../hooks/useSubmit';
 import { validateRequired, type FieldErrors } from '../../lib/validation';
-import { isAppError } from '../../lib/normalizeError';
 
 type LoginField = 'username' | 'password';
 
@@ -28,12 +26,11 @@ export const LoginForm = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const toast = useToast();
+  const { submitting, run } = useSubmit();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors<LoginField>>({});
-  const [submitting, setSubmitting] = useState(false);
 
   const redirectTo =
     (location.state as LocationState | null)?.from?.pathname ?? '/dashboard';
@@ -49,20 +46,10 @@ export const LoginForm = () => {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitting || !validate()) {
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await login({ username, password });
-      navigate(redirectTo, { replace: true });
-    } catch (error) {
-      if (isAppError(error)) {
-        toast(errorToast(error));
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    await run(() => login({ username, password }), {
+      guard: validate,
+      onSuccess: () => navigate(redirectTo, { replace: true }),
+    });
   };
 
   return (

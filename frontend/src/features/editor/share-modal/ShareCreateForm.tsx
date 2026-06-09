@@ -7,11 +7,9 @@ import {
   Stack,
   Text,
   VStack,
-  useToast,
 } from '@chakra-ui/react';
 import { LoadingButton } from '../../../components/LoadingButton';
-import { errorToast, successToast } from '../../../components/toast';
-import { isAppError } from '../../../lib/normalizeError';
+import { useSubmit } from '../../../hooks/useSubmit';
 import {
   Permission,
   ShareType,
@@ -23,25 +21,16 @@ interface ShareCreateFormProps {
 }
 
 export const ShareCreateForm = ({ onCreate }: ShareCreateFormProps) => {
-  const toast = useToast();
+  const { submitting, run } = useSubmit();
   const [shareType, setShareType] = useState<ShareType>(ShareType.PUBLIC_LINK);
   const [permission, setPermission] = useState<Permission>(
     Permission.READ_ONLY
   );
-  const [submitting, setSubmitting] = useState(false);
 
   const handleCreate = async () => {
-    setSubmitting(true);
-    try {
-      await onCreate({ shareType, permission });
-      toast(successToast('Share created.'));
-    } catch (error) {
-      if (isAppError(error)) {
-        toast(errorToast(error));
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    await run(() => onCreate({ shareType, permission }), {
+      successMessage: 'Share created.',
+    });
   };
 
   return (

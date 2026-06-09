@@ -14,15 +14,13 @@ import {
   ModalOverlay,
   VStack,
   Button,
-  useToast,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { LanguageSelect } from '../../../components/LanguageSelect';
 import { LoadingButton } from '../../../components/LoadingButton';
 import { snippetsApi } from '../../../api/snippetsApi';
-import { errorToast } from '../../../components/toast';
+import { useSubmit } from '../../../hooks/useSubmit';
 import { validateRequired } from '../../../lib/validation';
-import { isAppError } from '../../../lib/normalizeError';
 
 interface NewSnippetModalProps {
   isOpen: boolean;
@@ -31,13 +29,12 @@ interface NewSnippetModalProps {
 
 export const NewSnippetModal = ({ isOpen, onClose }: NewSnippetModalProps) => {
   const navigate = useNavigate();
-  const toast = useToast();
+  const { submitting, run } = useSubmit();
 
   const [title, setTitle] = useState('');
   const [languageId, setLanguageId] = useState('');
   const [titleError, setTitleError] = useState<string | undefined>();
   const [languageError, setLanguageError] = useState<string | undefined>();
-  const [submitting, setSubmitting] = useState(false);
 
   const reset = () => {
     setTitle('');
@@ -64,26 +61,22 @@ export const NewSnippetModal = ({ isOpen, onClose }: NewSnippetModalProps) => {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitting || !validate()) {
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const snippet = await snippetsApi.createSnippet({
-        languageId,
-        title: title.trim(),
-        content: '',
-      });
-      reset();
-      onClose();
-      navigate(`/editor/${snippet.id}`);
-    } catch (error) {
-      if (isAppError(error)) {
-        toast(errorToast(error));
+    await run(
+      () =>
+        snippetsApi.createSnippet({
+          languageId,
+          title: title.trim(),
+          content: '',
+        }),
+      {
+        guard: validate,
+        onSuccess: snippet => {
+          reset();
+          onClose();
+          navigate(`/editor/${snippet.id}`);
+        },
       }
-    } finally {
-      setSubmitting(false);
-    }
+    );
   };
 
   return (

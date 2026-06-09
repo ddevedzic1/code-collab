@@ -6,16 +6,14 @@ import {
   FormLabel,
   Input,
   VStack,
-  useToast,
 } from '@chakra-ui/react';
 import { SectionCard } from '../../../components/SectionCard';
 import { LoadingButton } from '../../../components/LoadingButton';
-import { errorToast, successToast } from '../../../components/toast';
+import { useSubmit } from '../../../hooks/useSubmit';
 import {
   validatePassword,
   validatePasswordConfirm,
 } from '../../../lib/validation';
-import { isAppError } from '../../../lib/normalizeError';
 import type { User, UserUpdateRequest } from '../../../types/user';
 
 interface PasswordSectionProps {
@@ -23,12 +21,11 @@ interface PasswordSectionProps {
 }
 
 export const PasswordSection = ({ onUpdate }: PasswordSectionProps) => {
-  const toast = useToast();
+  const { submitting, run } = useSubmit();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [confirmError, setConfirmError] = useState<string | undefined>();
-  const [submitting, setSubmitting] = useState(false);
 
   const validate = (): boolean => {
     const pError = validatePassword(password);
@@ -40,22 +37,14 @@ export const PasswordSection = ({ onUpdate }: PasswordSectionProps) => {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitting || !validate()) {
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await onUpdate({ password });
-      setPassword('');
-      setConfirm('');
-      toast(successToast('Password changed.'));
-    } catch (err) {
-      if (isAppError(err)) {
-        toast(errorToast(err));
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    await run(() => onUpdate({ password }), {
+      guard: validate,
+      successMessage: 'Password changed.',
+      onSuccess: () => {
+        setPassword('');
+        setConfirm('');
+      },
+    });
   };
 
   return (

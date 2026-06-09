@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Badge,
   Box,
@@ -8,14 +7,12 @@ import {
   Spacer,
   Text,
   useDisclosure,
-  useToast,
 } from '@chakra-ui/react';
 import { FiTrash2, FiArrowRight } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { snippetsApi } from '../../../api/snippetsApi';
-import { errorToast, successToast } from '../../../components/toast';
-import { isAppError } from '../../../lib/normalizeError';
+import { useSubmit } from '../../../hooks/useSubmit';
 import type { Snippet } from '../../../types/snippet';
 
 interface SnippetCardProps {
@@ -25,26 +22,19 @@ interface SnippetCardProps {
 
 export const SnippetCard = ({ snippet, onDeleted }: SnippetCardProps) => {
   const navigate = useNavigate();
-  const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [deleting, setDeleting] = useState(false);
+  const { submitting, run } = useSubmit();
 
   const openEditor = () => navigate(`/editor/${snippet.id}`);
 
   const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await snippetsApi.deleteSnippet(snippet.id);
-      toast(successToast('Snippet deleted.'));
-      onClose();
-      onDeleted();
-    } catch (error) {
-      if (isAppError(error)) {
-        toast(errorToast(error));
-      }
-    } finally {
-      setDeleting(false);
-    }
+    await run(() => snippetsApi.deleteSnippet(snippet.id), {
+      successMessage: 'Snippet deleted.',
+      onSuccess: () => {
+        onClose();
+        onDeleted();
+      },
+    });
   };
 
   return (
@@ -106,7 +96,7 @@ export const SnippetCard = ({ snippet, onDeleted }: SnippetCardProps) => {
         isOpen={isOpen}
         onClose={onClose}
         onConfirm={handleDelete}
-        isLoading={deleting}
+        isLoading={submitting}
         title="Delete snippet"
         body={
           <>

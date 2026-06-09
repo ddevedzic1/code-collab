@@ -20,6 +20,7 @@ import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { ErrorMessage } from '../../../components/ErrorMessage';
 import { Spinner } from '../../../components/Spinner';
 import { useShareUsers } from '../../../hooks/useShareUsers';
+import { useSubmit } from '../../../hooks/useSubmit';
 import { errorToast, successToast } from '../../../components/toast';
 import { isAppError } from '../../../lib/normalizeError';
 import { Permission } from '../../../types/share';
@@ -34,31 +35,21 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
     useShareUsers(shareId);
 
   const removeAllDialog = useDisclosure();
+  const addSubmit = useSubmit();
+  const removeAllSubmit = useSubmit();
   const [userId, setUserId] = useState('');
   const [permission, setPermission] = useState<Permission>(
     Permission.READ_ONLY
   );
-  const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [removingAll, setRemovingAll] = useState(false);
 
   const handleAdd = async (event: FormEvent) => {
     event.preventDefault();
-    if (adding || userId.trim() === '') {
-      return;
-    }
-    setAdding(true);
-    try {
-      await addUser({ userId: userId.trim(), permission });
-      setUserId('');
-      toast(successToast('User added.'));
-    } catch (err) {
-      if (isAppError(err)) {
-        toast(errorToast(err));
-      }
-    } finally {
-      setAdding(false);
-    }
+    await addSubmit.run(() => addUser({ userId: userId.trim(), permission }), {
+      guard: () => userId.trim() !== '',
+      successMessage: 'User added.',
+      onSuccess: () => setUserId(''),
+    });
   };
 
   const handleRemove = async (id: string) => {
@@ -76,18 +67,10 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
   };
 
   const handleRemoveAll = async () => {
-    setRemovingAll(true);
-    try {
-      await removeAll();
-      removeAllDialog.onClose();
-      toast(successToast('All users removed.'));
-    } catch (err) {
-      if (isAppError(err)) {
-        toast(errorToast(err));
-      }
-    } finally {
-      setRemovingAll(false);
-    }
+    await removeAllSubmit.run(() => removeAll(), {
+      successMessage: 'All users removed.',
+      onSuccess: () => removeAllDialog.onClose(),
+    });
   };
 
   return (
@@ -117,7 +100,7 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
             type="submit"
             colorScheme="blue"
             leftIcon={<FiUserPlus />}
-            isLoading={adding}
+            isLoading={addSubmit.submitting}
             isDisabled={userId.trim() === ''}
           >
             Add
@@ -189,7 +172,7 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
         isOpen={removeAllDialog.isOpen}
         onClose={removeAllDialog.onClose}
         onConfirm={handleRemoveAll}
-        isLoading={removingAll}
+        isLoading={removeAllSubmit.submitting}
         title="Remove all users"
         body="This removes every user from this share. Are you sure?"
         confirmLabel="Remove all"

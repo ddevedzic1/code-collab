@@ -8,15 +8,14 @@ import {
   HStack,
   Tag,
   Text,
-  useToast,
 } from '@chakra-ui/react';
 import { FiEdit2, FiEye, FiLock } from 'react-icons/fi';
 import { CodeEditor } from '../../components/CodeEditor';
 import { LoadingButton } from '../../components/LoadingButton';
 import { Spinner } from '../../components/Spinner';
 import { useSharedSnippet } from '../../hooks/useSharedSnippet';
+import { useSubmit } from '../../hooks/useSubmit';
 import { snippetsApi } from '../../api/snippetsApi';
-import { errorToast, successToast } from '../../components/toast';
 import { isAppError } from '../../lib/normalizeError';
 import { Permission } from '../../types/share';
 
@@ -25,11 +24,10 @@ interface PublicShareProps {
 }
 
 export const PublicShare = ({ token }: PublicShareProps) => {
-  const toast = useToast();
   const { shared, loading, error } = useSharedSnippet(token);
+  const { submitting, run } = useSubmit();
 
   const [content, setContent] = useState('');
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (shared) {
@@ -80,17 +78,9 @@ export const PublicShare = ({ token }: PublicShareProps) => {
   const canEdit = shared.permission === Permission.EDIT;
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      await snippetsApi.updateSnippet(shared.snippetId, { content });
-      toast(successToast('Changes saved.'));
-    } catch (err) {
-      if (isAppError(err)) {
-        toast(errorToast(err));
-      }
-    } finally {
-      setSaving(false);
-    }
+    await run(() => snippetsApi.updateSnippet(shared.snippetId, { content }), {
+      successMessage: 'Changes saved.',
+    });
   };
 
   return (
@@ -136,7 +126,7 @@ export const PublicShare = ({ token }: PublicShareProps) => {
         <Box flex="1" />
 
         {canEdit ? (
-          <LoadingButton colorScheme="blue" onClick={handleSave} isLoading={saving}>
+          <LoadingButton colorScheme="blue" onClick={handleSave} isLoading={submitting}>
             Save
           </LoadingButton>
         ) : null}

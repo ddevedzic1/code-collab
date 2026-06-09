@@ -8,33 +8,30 @@ import {
   Link,
   Text,
   VStack,
-  useToast,
 } from '@chakra-ui/react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { AuthCard } from './components/AuthCard';
 import { LoadingButton } from '../../components/LoadingButton';
 import { useAuth } from '../../context/auth/useAuth';
-import { errorToast, successToast } from '../../components/toast';
+import { useSubmit } from '../../hooks/useSubmit';
 import {
   validateEmail,
   validatePassword,
   validateUsername,
   type FieldErrors,
 } from '../../lib/validation';
-import { isAppError } from '../../lib/normalizeError';
 
 type RegisterField = 'username' | 'email' | 'password';
 
 export const RegisterForm = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const toast = useToast();
+  const { submitting, run } = useSubmit();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors<RegisterField>>({});
-  const [submitting, setSubmitting] = useState(false);
 
   const validate = (): boolean => {
     const next: FieldErrors<RegisterField> = {
@@ -48,21 +45,11 @@ export const RegisterForm = () => {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (submitting || !validate()) {
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await register({ username, email, password });
-      toast(successToast('Account created. Welcome to CodeCollab!'));
-      navigate('/dashboard', { replace: true });
-    } catch (error) {
-      if (isAppError(error)) {
-        toast(errorToast(error));
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    await run(() => register({ username, email, password }), {
+      guard: validate,
+      successMessage: 'Account created. Welcome to CodeCollab!',
+      onSuccess: () => navigate('/dashboard', { replace: true }),
+    });
   };
 
   return (

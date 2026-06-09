@@ -20,8 +20,8 @@ import { FiCheck, FiCopy } from 'react-icons/fi';
 import { ShareUsersPanel } from './ShareUsersPanel';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { copyToClipboard } from '../../../lib/clipboard';
-import { errorToast, successToast } from '../../../components/toast';
-import { isAppError } from '../../../lib/normalizeError';
+import { errorToast } from '../../../components/toast';
+import { useSubmit } from '../../../hooks/useSubmit';
 import {
   Permission,
   ShareType,
@@ -42,10 +42,10 @@ export const ShareDetails = ({
 }: ShareDetailsProps) => {
   const toast = useToast();
   const deleteDialog = useDisclosure();
+  const typeSubmit = useSubmit();
+  const permissionSubmit = useSubmit();
+  const deleteSubmit = useSubmit();
   const [copied, setCopied] = useState(false);
-  const [savingType, setSavingType] = useState(false);
-  const [savingPermission, setSavingPermission] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const shareUrl = `${window.location.origin}/s/${share.shareToken}`;
 
@@ -65,36 +65,11 @@ export const ShareDetails = ({
     }
   };
 
-  const handleChange = async (
-    body: ShareUpdateRequest,
-    setSaving: (saving: boolean) => void
-  ) => {
-    setSaving(true);
-    try {
-      await onUpdate(body);
-      toast(successToast('Share updated.'));
-    } catch (error) {
-      if (isAppError(error)) {
-        toast(errorToast(error));
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await onDelete();
-      deleteDialog.onClose();
-      toast(successToast('Share deleted.'));
-    } catch (error) {
-      if (isAppError(error)) {
-        toast(errorToast(error));
-      }
-    } finally {
-      setDeleting(false);
-    }
+    await deleteSubmit.run(() => onDelete(), {
+      successMessage: 'Share deleted.',
+      onSuccess: () => deleteDialog.onClose(),
+    });
   };
 
   return (
@@ -123,11 +98,12 @@ export const ShareDetails = ({
           <FormLabel fontSize="sm">Share type</FormLabel>
           <Select
             value={share.shareType}
-            isDisabled={savingType}
+            isDisabled={typeSubmit.submitting}
             onChange={event =>
-              handleChange(
-                { shareType: event.target.value as ShareType },
-                setSavingType
+              typeSubmit.run(
+                () =>
+                  onUpdate({ shareType: event.target.value as ShareType }),
+                { successMessage: 'Share updated.' }
               )
             }
           >
@@ -140,11 +116,12 @@ export const ShareDetails = ({
           <FormLabel fontSize="sm">Default permission</FormLabel>
           <Select
             value={share.permission}
-            isDisabled={savingPermission}
+            isDisabled={permissionSubmit.submitting}
             onChange={event =>
-              handleChange(
-                { permission: event.target.value as Permission },
-                setSavingPermission
+              permissionSubmit.run(
+                () =>
+                  onUpdate({ permission: event.target.value as Permission }),
+                { successMessage: 'Share updated.' }
               )
             }
           >
@@ -175,7 +152,7 @@ export const ShareDetails = ({
         isOpen={deleteDialog.isOpen}
         onClose={deleteDialog.onClose}
         onConfirm={handleDelete}
-        isLoading={deleting}
+        isLoading={deleteSubmit.submitting}
         title="Delete share"
         body="The share link will stop working and any user access will be removed. Continue?"
         confirmLabel="Delete share"

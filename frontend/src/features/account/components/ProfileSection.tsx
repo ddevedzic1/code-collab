@@ -6,13 +6,11 @@ import {
   FormLabel,
   Input,
   VStack,
-  useToast,
 } from '@chakra-ui/react';
 import { SectionCard } from '../../../components/SectionCard';
 import { LoadingButton } from '../../../components/LoadingButton';
-import { errorToast, successToast } from '../../../components/toast';
+import { useSubmit } from '../../../hooks/useSubmit';
 import { validateUsername } from '../../../lib/validation';
-import { isAppError } from '../../../lib/normalizeError';
 import type { User, UserUpdateRequest } from '../../../types/user';
 
 interface ProfileSectionProps {
@@ -26,10 +24,9 @@ export const ProfileSection = ({
   onUpdate,
   onUsernameChanged,
 }: ProfileSectionProps) => {
-  const toast = useToast();
+  const { submitting, run } = useSubmit();
   const [username, setUsername] = useState(user.username);
   const [error, setError] = useState<string | undefined>();
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setUsername(user.username);
@@ -39,23 +36,15 @@ export const ProfileSection = ({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const validationError = validateUsername(username);
-    setError(validationError);
-    if (validationError || submitting || isUnchanged) {
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const updated = await onUpdate({ username: username.trim() });
-      onUsernameChanged(updated.username);
-      toast(successToast('Profile updated.'));
-    } catch (err) {
-      if (isAppError(err)) {
-        toast(errorToast(err));
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    await run(() => onUpdate({ username: username.trim() }), {
+      guard: () => {
+        const validationError = validateUsername(username);
+        setError(validationError);
+        return !validationError && !isUnchanged;
+      },
+      successMessage: 'Profile updated.',
+      onSuccess: updated => onUsernameChanged(updated.username),
+    });
   };
 
   return (
