@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { sharesApi } from '../api/sharesApi';
+import { useAsyncResource } from './useAsyncResource';
 import type { SharedSnippet } from '../types/share';
 import type { AppError } from '../types/api';
 
@@ -13,40 +14,17 @@ interface UseSharedSnippetResult {
 export const useSharedSnippet = (
   token: string | undefined
 ): UseSharedSnippetResult => {
-  const [shared, setShared] = useState<SharedSnippet | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<AppError | null>(null);
+  const fetcher = useCallback(
+    () => sharesApi.getShareByToken(token as string),
+    [token]
+  );
 
-  useEffect(() => {
-    if (!token) {
-      return;
-    }
-    let active = true;
-    setLoading(true);
-    setError(null);
+  // This is a public endpoint, so a 401 is meaningful and must not be hidden.
+  const { data, loading, error } = useAsyncResource(
+    token ? fetcher : null,
+    [token],
+    { suppressUnauthorized: false }
+  );
 
-    sharesApi
-      .getShareByToken(token)
-      .then(result => {
-        if (active) {
-          setShared(result);
-        }
-      })
-      .catch((err: AppError) => {
-        if (active) {
-          setError(err);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [token]);
-
-  return { shared, loading, error };
+  return { shared: data, loading, error };
 };

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { usersApi } from '../api/usersApi';
+import { useAsyncResource } from './useAsyncResource';
 import type { User, UserUpdateRequest } from '../types/user';
 import type { AppError } from '../types/api';
 
@@ -13,42 +14,12 @@ interface UseUserResult {
 }
 
 export const useUser = (id: string | undefined): UseUserResult => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<AppError | null>(null);
+  const fetcher = useCallback(() => usersApi.getUser(id as string), [id]);
 
-  const fetchUser = useCallback(() => {
-    if (!id) {
-      return;
-    }
-    let active = true;
-    setLoading(true);
-    setError(null);
-
-    usersApi
-      .getUser(id)
-      .then(result => {
-        if (active) {
-          setUser(result);
-        }
-      })
-      .catch((err: AppError) => {
-        if (active && err.status !== 401) {
-          setError(err);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [id]);
-
-  useEffect(() => fetchUser(), [fetchUser]);
+  const { data, loading, error, refetch, setData } = useAsyncResource(
+    id ? fetcher : null,
+    [id]
+  );
 
   const updateUser = useCallback(
     async (body: UserUpdateRequest): Promise<User> => {
@@ -56,10 +27,10 @@ export const useUser = (id: string | undefined): UseUserResult => {
         throw new Error('No user id');
       }
       const updated = await usersApi.updateUser(id, body);
-      setUser(updated);
+      setData(updated);
       return updated;
     },
-    [id]
+    [id, setData]
   );
 
   const deleteUser = useCallback(async (): Promise<void> => {
@@ -69,5 +40,5 @@ export const useUser = (id: string | undefined): UseUserResult => {
     await usersApi.deleteUser(id);
   }, [id]);
 
-  return { user, loading, error, refetch: fetchUser, updateUser, deleteUser };
+  return { user: data, loading, error, refetch, updateUser, deleteUser };
 };

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { sharesApi } from '../api/sharesApi';
+import { useAsyncResource } from './useAsyncResource';
 import type { ShareUser, ShareUserCreateRequest } from '../types/share';
 import type { AppError } from '../types/api';
 
@@ -17,42 +18,15 @@ interface UseShareUsersResult {
 export const useShareUsers = (
   shareId: string | undefined
 ): UseShareUsersResult => {
-  const [users, setUsers] = useState<ShareUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<AppError | null>(null);
+  const fetcher = useCallback(
+    () => sharesApi.listShareUsers(shareId as string),
+    [shareId]
+  );
 
-  const reload = useCallback(() => {
-    if (!shareId) {
-      return;
-    }
-    let active = true;
-    setLoading(true);
-    setError(null);
-
-    sharesApi
-      .listShareUsers(shareId)
-      .then(result => {
-        if (active) {
-          setUsers(result);
-        }
-      })
-      .catch((err: AppError) => {
-        if (active && err.status !== 401) {
-          setError(err);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [shareId]);
-
-  useEffect(() => reload(), [reload]);
+  const { data, loading, error, refetch } = useAsyncResource(
+    shareId ? fetcher : null,
+    [shareId]
+  );
 
   const addUser = useCallback(
     async (body: ShareUserCreateRequest): Promise<void> => {
@@ -60,9 +34,9 @@ export const useShareUsers = (
         throw new Error('No share id');
       }
       await sharesApi.addShareUser(shareId, body);
-      reload();
+      refetch();
     },
-    [shareId, reload]
+    [shareId, refetch]
   );
 
   const removeUser = useCallback(
@@ -71,9 +45,9 @@ export const useShareUsers = (
         throw new Error('No share id');
       }
       await sharesApi.removeShareUser(shareId, userId);
-      reload();
+      refetch();
     },
-    [shareId, reload]
+    [shareId, refetch]
   );
 
   const removeAll = useCallback(async (): Promise<void> => {
@@ -81,8 +55,16 @@ export const useShareUsers = (
       throw new Error('No share id');
     }
     await sharesApi.removeAllShareUsers(shareId);
-    reload();
-  }, [shareId, reload]);
+    refetch();
+  }, [shareId, refetch]);
 
-  return { users, loading, error, reload, addUser, removeUser, removeAll };
+  return {
+    users: data ?? [],
+    loading,
+    error,
+    reload: refetch,
+    addUser,
+    removeUser,
+    removeAll,
+  };
 };

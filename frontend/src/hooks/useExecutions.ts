@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { executionsApi } from '../api/executionsApi';
+import { useAsyncResource } from './useAsyncResource';
 import type { PageResult } from '../types/api';
 import type { Execution, ExecutionListParams } from '../types/execution';
 import type { AppError } from '../types/api';
@@ -16,45 +17,18 @@ export const useExecutions = (
   params: ExecutionListParams,
   enabled = true
 ): UseExecutionsResult => {
-  const [page, setPage] = useState<PageResult<Execution> | null>(null);
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<AppError | null>(null);
-
   const paramsKey = JSON.stringify(params);
 
-  const fetchExecutions = useCallback(() => {
-    if (!enabled) {
-      return;
-    }
-    let active = true;
-    setLoading(true);
-    setError(null);
-
-    executionsApi
-      .listExecutions(params)
-      .then(result => {
-        if (active) {
-          setPage(result);
-        }
-      })
-      .catch((err: AppError) => {
-        if (active && err.status !== 401) {
-          setError(err);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
+  const fetcher = useCallback(
+    () => executionsApi.listExecutions(params),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paramsKey, enabled]);
+    [paramsKey]
+  );
 
-  useEffect(() => fetchExecutions(), [fetchExecutions]);
+  const { data, loading, error, refetch } = useAsyncResource(
+    enabled ? fetcher : null,
+    [paramsKey, enabled]
+  );
 
-  return { page, loading, error, refetch: fetchExecutions };
+  return { page: data, loading, error, refetch };
 };
