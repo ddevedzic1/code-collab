@@ -23,7 +23,7 @@ import { useShareUsers } from '../../../hooks/useShareUsers';
 import { useSubmit } from '../../../hooks/useSubmit';
 import { errorToast, successToast } from '../../../components/toast';
 import { isAppError } from '../../../lib/normalizeError';
-import { Permission } from '../../../types/share';
+import { Permission, permissionLabel } from '../../../types/share';
 
 interface ShareUsersPanelProps {
   shareId: string;
@@ -93,8 +93,12 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
             onChange={event => setPermission(event.target.value as Permission)}
             w="130px"
           >
-            <option value={Permission.READ_ONLY}>Read only</option>
-            <option value={Permission.EDIT}>Can edit</option>
+            <option value={Permission.READ_ONLY}>
+              {permissionLabel(Permission.READ_ONLY)}
+            </option>
+            <option value={Permission.EDIT}>
+              {permissionLabel(Permission.EDIT)}
+            </option>
           </Select>
           <LoadingButton
             type="submit"
@@ -139,9 +143,7 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
               </Text>
               <HStack spacing={2}>
                 <Tag size="sm" colorScheme="blue" variant="subtle">
-                  {shareUser.permission === Permission.EDIT
-                    ? 'Can edit'
-                    : 'Read only'}
+                  {permissionLabel(shareUser.permission)}
                 </Tag>
                 <IconButton
                   aria-label="Remove user"

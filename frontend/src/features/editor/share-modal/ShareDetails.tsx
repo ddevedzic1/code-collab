@@ -24,6 +24,7 @@ import { errorToast } from '../../../components/toast';
 import { useSubmit } from '../../../hooks/useSubmit';
 import {
   Permission,
+  permissionLabel,
   ShareType,
   type Share,
   type ShareUpdateRequest,
@@ -125,8 +126,12 @@ export const ShareDetails = ({
               )
             }
           >
-            <option value={Permission.READ_ONLY}>Read only</option>
-            <option value={Permission.EDIT}>Can edit</option>
+            <option value={Permission.READ_ONLY}>
+              {permissionLabel(Permission.READ_ONLY)}
+            </option>
+            <option value={Permission.EDIT}>
+              {permissionLabel(Permission.EDIT)}
+            </option>
           </Select>
         </FormControl>
       </HStack>

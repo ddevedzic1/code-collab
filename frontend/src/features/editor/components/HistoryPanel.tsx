@@ -13,6 +13,10 @@ import { StatusBadge } from './StatusBadge';
 import { Spinner } from '../../../components/Spinner';
 import { ErrorMessage } from '../../../components/ErrorMessage';
 import { useExecutions } from '../../../hooks/useExecutions';
+import {
+  EXECUTIONS_PAGE_SIZE,
+  EXECUTIONS_SORT,
+} from '../../../lib/queryConstants';
 import type { Execution } from '../../../types/execution';
 
 interface HistoryPanelProps {
@@ -23,8 +27,6 @@ interface HistoryPanelProps {
   onSelect: (execution: Execution) => void;
 }
 
-const PAGE_SIZE = 20;
-
 export const HistoryPanel = ({
   snippetId,
   refreshToken,
@@ -34,8 +36,8 @@ export const HistoryPanel = ({
   const { page, loading, error, refetch } = useExecutions({
     snippetId,
     page: 0,
-    size: PAGE_SIZE,
-    sort: 'createdAt,desc',
+    size: EXECUTIONS_PAGE_SIZE,
+    sort: EXECUTIONS_SORT,
   });
 
   useEffect(() => {

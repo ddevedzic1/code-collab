@@ -12,6 +12,7 @@ import { LoadingButton } from '../../../components/LoadingButton';
 import { useSubmit } from '../../../hooks/useSubmit';
 import {
   Permission,
+  permissionLabel,
   ShareType,
   type ShareCreateRequest,
 } from '../../../types/share';
@@ -63,8 +64,12 @@ export const ShareCreateForm = ({ onCreate }: ShareCreateFormProps) => {
           onChange={value => setPermission(value as Permission)}
         >
           <Stack direction="row" spacing={4}>
-            <Radio value={Permission.READ_ONLY}>Read only</Radio>
-            <Radio value={Permission.EDIT}>Can edit</Radio>
+            <Radio value={Permission.READ_ONLY}>
+              {permissionLabel(Permission.READ_ONLY)}
+            </Radio>
+            <Radio value={Permission.EDIT}>
+              {permissionLabel(Permission.EDIT)}
+            </Radio>
           </Stack>
         </RadioGroup>
       </FormControl>

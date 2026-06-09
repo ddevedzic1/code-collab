@@ -17,7 +17,7 @@ import { useSharedSnippet } from '../../hooks/useSharedSnippet';
 import { useSubmit } from '../../hooks/useSubmit';
 import { snippetsApi } from '../../api/snippetsApi';
 import { isAppError } from '../../lib/normalizeError';
-import { Permission } from '../../types/share';
+import { Permission, permissionLabel } from '../../types/share';
 
 interface PublicShareProps {
   token: string;
@@ -120,7 +120,7 @@ export const PublicShare = ({ token }: PublicShareProps) => {
           gap={1}
         >
           {canEdit ? <FiEdit2 /> : <FiEye />}
-          {canEdit ? 'Can edit' : 'Read only'}
+          {permissionLabel(shared.permission)}
         </Tag>
 
         <Box flex="1" />

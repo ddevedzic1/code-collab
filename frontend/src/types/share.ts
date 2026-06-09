@@ -12,6 +12,15 @@ export const Permission = {
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 
+const PERMISSION_LABELS: Record<Permission, string> = {
+  [Permission.READ_ONLY]: 'Read only',
+  [Permission.EDIT]: 'Can edit',
+};
+
+/** Human-readable label for a permission, used across share UI. */
+export const permissionLabel = (permission: Permission): string =>
+  PERMISSION_LABELS[permission];
+
 export interface Share {
   id: string;
   snippetId: string;

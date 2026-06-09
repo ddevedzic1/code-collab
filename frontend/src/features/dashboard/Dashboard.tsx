@@ -19,9 +19,8 @@ import { Spinner } from '../../components/Spinner';
 import { ErrorMessage } from '../../components/ErrorMessage';
 import { useSnippets } from '../../hooks/useSnippets';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { SNIPPETS_PAGE_SIZE, SNIPPETS_SORT } from '../../lib/queryConstants';
 import type { SnippetListParams } from '../../types/snippet';
-
-const PAGE_SIZE = 12;
 
 export const Dashboard = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -41,8 +40,8 @@ export const Dashboard = () => {
       title: debouncedTitle || undefined,
       languageId: languageId || undefined,
       page,
-      size: PAGE_SIZE,
-      sort: 'title,asc',
+      size: SNIPPETS_PAGE_SIZE,
+      sort: SNIPPETS_SORT,
     }),
     [debouncedTitle, languageId, page]
   );
