@@ -32,7 +32,6 @@ export const Dashboard = () => {
 
   const debouncedTitle = useDebouncedValue(title);
 
-  // Reset to the first page whenever a filter changes.
   useEffect(() => {
     setPage(0);
   }, [debouncedTitle, languageId]);

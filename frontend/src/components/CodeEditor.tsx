@@ -22,7 +22,6 @@ export const CodeEditor = ({
   height = '100%',
   placeholder,
 }: CodeEditorProps) => {
-  // Rebuild extensions only when the language changes, not on every keystroke.
   const extensions = useMemo(
     () => [...getLanguageExtension(languageCode), EditorView.lineWrapping],
     [languageCode]

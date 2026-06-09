@@ -10,8 +10,8 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
     try {
       await navigator.clipboard.writeText(text);
       return true;
-    } catch {
-      // fall through to the legacy path
+    } catch (error) {
+      void error;
     }
   }
 

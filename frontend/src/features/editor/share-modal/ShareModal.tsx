@@ -20,7 +20,6 @@ interface ShareModalProps {
 }
 
 export const ShareModal = ({ snippetId, isOpen, onClose }: ShareModalProps) => {
-  // Defer the share probe until the modal is actually open.
   const { status, share, error, createShare, updateShare, deleteShare } =
     useShare(snippetId, isOpen);
 

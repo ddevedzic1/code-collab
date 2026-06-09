@@ -6,7 +6,6 @@ import { AuthContext, type AuthStatus } from './AuthContext';
 import { authApi } from '../../api/authApi';
 import { onSessionExpired } from '../../lib/authEvents';
 import { errorToast } from '../../components/toast';
-import { isAppError } from '../../lib/normalizeError';
 import type { AuthUser, LoginRequest, RegisterRequest } from '../../types/auth';
 
 /** Path prefixes where a 401 must NOT bounce the user to /login. */
@@ -27,8 +26,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const location = useLocation();
   const toast = useToast();
 
-  // Refs keep the latest values available to the (long-lived) event subscriber
-  // without re-subscribing on every render, and avoid stale-closure bugs.
   const bootstrappingRef = useRef(true);
   const redirectingRef = useRef(false);
   const navigateRef = useRef(navigate);
@@ -36,7 +33,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   navigateRef.current = navigate;
   locationRef.current = location;
 
-  // Bootstrap: rehydrate the session on first load (and after a refresh).
   useEffect(() => {
     let active = true;
     bootstrappingRef.current = true;
@@ -51,7 +47,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setStatus('authed');
       })
       .catch(() => {
-        // A 401 here is expected: it simply means "not logged in".
         if (!active) {
           return;
         }
@@ -67,7 +62,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
   }, []);
 
-  // React to a mid-session 401 announced by the axios interceptor.
   useEffect(() => {
     const unsubscribe = onSessionExpired(() => {
       if (bootstrappingRef.current || redirectingRef.current) {
@@ -89,7 +83,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         navigateRef.current('/login', { replace: true });
       }
 
-      // Allow future expirations to be handled once this cycle settles.
       window.setTimeout(() => {
         redirectingRef.current = false;
       }, 0);
@@ -112,8 +105,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const register = useCallback(
     async (body: RegisterRequest): Promise<void> => {
       await authApi.register(body);
-      // Registration does not create a session, so log in immediately for a
-      // smooth experience.
       await login({ username: body.username, password: body.password });
     },
     [login]
@@ -127,10 +118,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await authApi.logout();
     } catch (error) {
-      // A failed logout still clears local state; only surface non-401 errors.
-      if (isAppError(error) && error.status === 401) {
-        // already logged out server-side
-      }
+      void error;
     } finally {
       setUser(null);
       setStatus('anon');

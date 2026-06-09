@@ -39,8 +39,6 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
   const { execution, isRunning, error: executionError, run, loadExisting } =
     useExecution(snippet.id);
 
-  // Bump the history list whenever the tracked execution reaches a terminal
-  // state, so a finished run appears in History without a manual refresh.
   useEffect(() => {
     if (execution && isTerminalStatus(execution.status)) {
       setHistoryRefreshToken(token => token + 1);
@@ -52,8 +50,6 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
     content !== snippet.content ||
     languageId !== snippet.language.id;
 
-  // Resolve the selected language object for syntax highlighting + the select
-  // fallback (so the editor still works if the language list failed to load).
   const selectedLanguage = useMemo(
     () =>
       languages.find(lang => lang.id === languageId) ?? snippet.language,
@@ -93,7 +89,6 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
 
   const handleRun = useCallback(async () => {
     setTabIndex(OUTPUT_TAB);
-    // Persist pending edits before running so the execution uses fresh code.
     if (isDirty) {
       await handleSave();
     }
@@ -185,7 +180,6 @@ export const Editor = ({ snippetId }: EditorProps) => {
     );
   }
 
-  // `key` resets all local editor state when navigating between snippets.
   return (
     <EditorView key={snippet.id} snippet={snippet} onSnippetSaved={setSnippet} />
   );

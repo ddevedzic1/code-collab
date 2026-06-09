@@ -38,8 +38,6 @@ export const HistoryPanel = ({
     sort: 'createdAt,desc',
   });
 
-  // Refetch when the parent signals a change (a run finished, etc.). Skip the
-  // initial render, which the hook already fetches on mount.
   useEffect(() => {
     if (refreshToken > 0) {
       refetch();

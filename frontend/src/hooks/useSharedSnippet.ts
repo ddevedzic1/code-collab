@@ -19,7 +19,6 @@ export const useSharedSnippet = (
     [token]
   );
 
-  // This is a public endpoint, so a 401 is meaningful and must not be hidden.
   const { data, loading, error } = useAsyncResource(
     token ? fetcher : null,
     [token],

@@ -12,10 +12,7 @@ interface UseSnippetsResult {
   refetch: () => void;
 }
 
-/**
- * Fetches a page of the current user's snippets. Re-fetches whenever the
- * serialized params change (title / languageId / page / size / sort).
- */
+/** Fetches a page of the current user's snippets. */
 export const useSnippets = (params: SnippetListParams): UseSnippetsResult => {
   const paramsKey = JSON.stringify(params);
 
