@@ -42,11 +42,13 @@ export interface ShareUpdateRequest {
 export interface ShareUser {
   id: string;
   userId: string;
+  /** Present only for users added through the username flow; may be null otherwise. */
+  username: string | null;
   permission: Permission;
 }
 
 export interface ShareUserCreateRequest {
-  userId: string;
+  username: string;
   permission: Permission;
 }
 

@@ -72,8 +72,13 @@ export const sharesApi = {
     return data;
   },
 
-  removeShareUser: async (shareId: string, userId: string): Promise<void> => {
-    await api.delete(`/shares/${shareId}/users/${userId}`);
+  removeShareUser: async (
+    shareId: string,
+    username: string
+  ): Promise<void> => {
+    await api.delete(
+      `/shares/${shareId}/users/${encodeURIComponent(username)}`
+    );
   },
 
   removeAllShareUsers: async (shareId: string): Promise<void> => {

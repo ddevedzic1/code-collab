@@ -37,7 +37,7 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
   const removeAllDialog = useDisclosure();
   const addSubmit = useSubmit();
   const removeAllSubmit = useSubmit();
-  const [userId, setUserId] = useState('');
+  const [username, setUsername] = useState('');
   const [permission, setPermission] = useState<Permission>(
     Permission.READ_ONLY
   );
@@ -45,17 +45,20 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
 
   const handleAdd = async (event: FormEvent) => {
     event.preventDefault();
-    await addSubmit.run(() => addUser({ userId: userId.trim(), permission }), {
-      guard: () => userId.trim() !== '',
-      successMessage: 'User added.',
-      onSuccess: () => setUserId(''),
-    });
+    await addSubmit.run(
+      () => addUser({ username: username.trim(), permission }),
+      {
+        guard: () => username.trim() !== '',
+        successMessage: 'User added.',
+        onSuccess: () => setUsername(''),
+      }
+    );
   };
 
-  const handleRemove = async (id: string) => {
-    setRemovingId(id);
+  const handleRemove = async (rowId: string, removeUsername: string) => {
+    setRemovingId(rowId);
     try {
-      await removeUser(id);
+      await removeUser(removeUsername);
       toast(successToast('User removed.'));
     } catch (err) {
       if (isAppError(err)) {
@@ -83,9 +86,9 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
       <form onSubmit={handleAdd}>
         <HStack spacing={2} mb={4} align="stretch">
           <Input
-            placeholder="User ID (UUID)"
-            value={userId}
-            onChange={event => setUserId(event.target.value)}
+            placeholder="Username"
+            value={username}
+            onChange={event => setUsername(event.target.value)}
             flex="1"
           />
           <Select
@@ -105,7 +108,7 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
             colorScheme="blue"
             leftIcon={<FiUserPlus />}
             isLoading={addSubmit.submitting}
-            isDisabled={userId.trim() === ''}
+            isDisabled={username.trim() === ''}
           >
             Add
           </LoadingButton>
@@ -134,12 +137,11 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
               py={2}
             >
               <Text
-                fontSize="xs"
-                fontFamily="mono"
+                fontSize="sm"
                 noOfLines={1}
-                title={shareUser.userId}
+                title={shareUser.username ?? shareUser.userId}
               >
-                {shareUser.userId}
+                {shareUser.username ?? shareUser.userId}
               </Text>
               <HStack spacing={2}>
                 <Tag size="sm" colorScheme="blue" variant="subtle">
@@ -151,8 +153,12 @@ export const ShareUsersPanel = ({ shareId }: ShareUsersPanelProps) => {
                   size="xs"
                   variant="ghost"
                   colorScheme="red"
-                  isLoading={removingId === shareUser.userId}
-                  onClick={() => handleRemove(shareUser.userId)}
+                  isLoading={removingId === shareUser.id}
+                  isDisabled={!shareUser.username}
+                  onClick={() =>
+                    shareUser.username &&
+                    handleRemove(shareUser.id, shareUser.username)
+                  }
                 />
               </HStack>
             </HStack>

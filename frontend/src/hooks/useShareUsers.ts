@@ -10,7 +10,7 @@ interface UseShareUsersResult {
   error: AppError | null;
   reload: () => void;
   addUser: (body: ShareUserCreateRequest) => Promise<void>;
-  removeUser: (userId: string) => Promise<void>;
+  removeUser: (username: string) => Promise<void>;
   removeAll: () => Promise<void>;
 }
 
@@ -40,11 +40,11 @@ export const useShareUsers = (
   );
 
   const removeUser = useCallback(
-    async (userId: string): Promise<void> => {
+    async (username: string): Promise<void> => {
       if (!shareId) {
         throw new Error('No share id');
       }
-      await sharesApi.removeShareUser(shareId, userId);
+      await sharesApi.removeShareUser(shareId, username);
       refetch();
     },
     [shareId, refetch]
