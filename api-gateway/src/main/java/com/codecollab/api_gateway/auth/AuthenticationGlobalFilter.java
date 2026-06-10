@@ -47,12 +47,13 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
 			return chain.filter(sanitizedExchange);
 		}
 
-		if (isPublic(path)) {
-			return chain.filter(sanitizedExchange);
-		}
-
 		var cookieHeader = request.getHeaders().getFirst(HttpHeaders.COOKIE);
+		var isPublic = isPublic(path);
+
 		if (cookieHeader == null || cookieHeader.isBlank()) {
+			if (isPublic) {
+				return chain.filter(sanitizedExchange);
+			}
 			return unauthorized(exchange);
 		}
 
@@ -63,7 +64,7 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
 				.bodyToMono(SessionUserDto.class)
 				.flatMap(sessionUser -> {
 					if (sessionUser == null || sessionUser.getId() == null) {
-						return unauthorized(exchange);
+						return isPublic ? chain.filter(sanitizedExchange) : unauthorized(exchange);
 					}
 					var authenticatedExchange = sanitizedExchange.mutate()
 							.request(r -> r.header(USER_ID_HEADER, sessionUser.getId().toString()))
@@ -72,7 +73,7 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
 				})
 				.onErrorResume(ex -> {
 					log.warn("Session validation failed for path {}: {}", path, ex.getMessage());
-					return unauthorized(exchange);
+					return isPublic ? chain.filter(sanitizedExchange) : unauthorized(exchange);
 				});
 	}
 
