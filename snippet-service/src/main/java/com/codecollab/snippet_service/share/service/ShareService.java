@@ -186,6 +186,12 @@ public class ShareService extends BaseService {
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.share.token.invalid")));
 
+		var snippet = share.getSnippet();
+
+		if (callerUserId != null && snippet.getUserId().equals(callerUserId)) {
+			return toSharedSnippetResponseDto(snippet, Permission.EDIT);
+		}
+
 		Optional<SnippetShareUser> perUser = callerUserId == null
 				? Optional.empty()
 				: snippetShareUserRepository.findBySnippetShareIdAndUserId(share.getId(), callerUserId);
@@ -199,7 +205,6 @@ public class ShareService extends BaseService {
 				.map(SnippetShareUser::getPermission)
 				.orElse(share.getPermission());
 
-		var snippet = share.getSnippet();
 		return toSharedSnippetResponseDto(snippet, effectivePermission);
 	}
 
