@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.codecollab.user_service.exception.AppException;
 import com.codecollab.user_service.service.BaseService;
+import com.codecollab.user_service.user.dto.UserLookupDto;
 import com.codecollab.user_service.user.dto.UserResponseDto;
 import com.codecollab.user_service.user.dto.UserUpdateDto;
 import com.codecollab.user_service.user.model.User;
@@ -27,6 +28,13 @@ public class UserService extends BaseService {
 	public UserResponseDto getById(UUID id, UUID callerUserId) {
 		var user = findOwnedUser(id, callerUserId);
 		return modelMapper.map(user, UserResponseDto.class);
+	}
+
+	public UserLookupDto lookupByUsername(String username) {
+		var user = userRepository.findByUsername(username)
+				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
+						messages.get("error.user.username.not.found", username)));
+		return modelMapper.map(user, UserLookupDto.class);
 	}
 
 	public UserResponseDto update(UUID id, UserUpdateDto dto, UUID callerUserId) {

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.codecollab.user_service.controller.BaseController;
+import com.codecollab.user_service.user.dto.UserLookupDto;
 import com.codecollab.user_service.user.dto.UserResponseDto;
 import com.codecollab.user_service.user.dto.UserUpdateDto;
 import com.codecollab.user_service.user.service.UserService;
@@ -26,6 +27,11 @@ import lombok.RequiredArgsConstructor;
 public class UserController extends BaseController {
 
 	private final UserService userService;
+
+	@GetMapping("/by-username/{username}")
+	public ResponseEntity<UserLookupDto> lookupByUsername(@PathVariable String username) {
+		return ResponseEntity.ok(userService.lookupByUsername(username));
+	}
 
 	@GetMapping("/{id}")
 	public ResponseEntity<UserResponseDto> getById(@PathVariable UUID id,
