@@ -11,5 +11,6 @@ public class ShareUserResponseDto {
 
 	private UUID id;
 	private UUID userId;
+	private String username;
 	private Permission permission;
 }

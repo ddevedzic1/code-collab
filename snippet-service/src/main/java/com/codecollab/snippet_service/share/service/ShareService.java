@@ -8,6 +8,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.codecollab.snippet_service.client.user.UserClient;
+import com.codecollab.snippet_service.client.user.UserLookupClientDto;
 import com.codecollab.snippet_service.exception.AppException;
 import com.codecollab.snippet_service.service.BaseService;
 import com.codecollab.snippet_service.share.dto.SharedSnippetResponseDto;
@@ -26,6 +28,7 @@ import com.codecollab.snippet_service.snippet.dto.SnippetLanguageDto;
 import com.codecollab.snippet_service.snippet.model.Snippet;
 import com.codecollab.snippet_service.snippet.repository.SnippetRepository;
 
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,6 +40,7 @@ public class ShareService extends BaseService {
 	private final SnippetShareRepository snippetShareRepository;
 	private final SnippetShareUserRepository snippetShareUserRepository;
 	private final SnippetRepository snippetRepository;
+	private final UserClient userClient;
 
 	@Transactional
 	public ShareResponseDto create(UUID snippetId, ShareCreateDto dto, UUID callerUserId) {
@@ -109,30 +113,39 @@ public class ShareService extends BaseService {
 	public ShareUserResponseDto addUser(UUID shareId, ShareUserCreateDto dto, UUID callerUserId) {
 		var share = getOwnedShare(shareId, callerUserId);
 
-		if (snippetShareUserRepository.existsBySnippetShareIdAndUserId(share.getId(), dto.getUserId())) {
+		var targetUser = resolveUser(dto.getUsername());
+
+		if (targetUser.getId().equals(callerUserId)) {
+			throw new AppException(AppException.VALIDATION_ERROR,
+					messages.get("error.share.user.self"));
+		}
+		if (snippetShareUserRepository.existsBySnippetShareIdAndUserId(share.getId(), targetUser.getId())) {
 			throw new AppException(AppException.VALIDATION_ERROR,
 					messages.get("error.share.user.already.added"));
 		}
 
 		var entity = new SnippetShareUser();
 		entity.setSnippetShare(share);
-		entity.setUserId(dto.getUserId());
+		entity.setUserId(targetUser.getId());
 		entity.setPermission(dto.getPermission());
 		var saved = snippetShareUserRepository.save(entity);
 
-		log.info("Added user {} to share {}", dto.getUserId(), shareId);
-		return modelMapper.map(saved, ShareUserResponseDto.class);
+		log.info("Added user {} ({}) to share {}", targetUser.getUsername(), targetUser.getId(), shareId);
+		var response = modelMapper.map(saved, ShareUserResponseDto.class);
+		response.setUsername(targetUser.getUsername());
+		return response;
 	}
 
 	@Transactional
-	public void removeUser(UUID shareId, UUID userId, UUID callerUserId) {
+	public void removeUser(UUID shareId, String username, UUID callerUserId) {
 		getOwnedShare(shareId, callerUserId);
-		var shareUser = snippetShareUserRepository.findBySnippetShareIdAndUserId(shareId, userId)
+		var targetUser = resolveUser(username);
+		var shareUser = snippetShareUserRepository.findBySnippetShareIdAndUserId(shareId, targetUser.getId())
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.share.user.not.found")));
 		shareUser.setEndDate(LocalDateTime.now());
 		snippetShareUserRepository.save(shareUser);
-		log.info("Removed user {} from share {}", userId, shareId);
+		log.info("Removed user {} ({}) from share {}", username, targetUser.getId(), shareId);
 	}
 
 	@Transactional
@@ -166,6 +179,31 @@ public class ShareService extends BaseService {
 
 		var snippet = share.getSnippet();
 		return toSharedSnippetResponseDto(snippet, effectivePermission);
+	}
+
+	private UserLookupClientDto resolveUser(String username) {
+		try {
+			return userClient.lookupByUsername(username);
+		} catch (Exception ex) {
+			var feign = unwrapFeign(ex);
+			if (feign instanceof FeignException.NotFound) {
+				throw new AppException(AppException.VALIDATION_ERROR,
+						messages.get("error.share.user.username.not.found", username));
+			}
+			log.warn("User lookup failed for username {}: {}", username, ex.getMessage());
+			throw new AppException(AppException.SERVICE_UNAVAILABLE_ERROR,
+					messages.get("error.system.unavailable"));
+		}
+	}
+
+	private static FeignException unwrapFeign(Throwable t) {
+		if (t instanceof FeignException fe) {
+			return fe;
+		}
+		if (t.getCause() instanceof FeignException fe) {
+			return fe;
+		}
+		return null;
 	}
 
 	private SnippetShare getOwnedShare(UUID shareId, UUID callerUserId) {

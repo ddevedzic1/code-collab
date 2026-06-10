@@ -82,10 +82,10 @@ public class ShareController extends BaseController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
-	@DeleteMapping("/shares/{shareId}/users/{userId}")
-	public ResponseEntity<Void> removeUser(@PathVariable UUID shareId, @PathVariable UUID userId,
+	@DeleteMapping("/shares/{shareId}/users/{username}")
+	public ResponseEntity<Void> removeUser(@PathVariable UUID shareId, @PathVariable String username,
 			@RequestHeader("X-User-Id") UUID callerUserId) {
-		shareService.removeUser(shareId, userId, callerUserId);
+		shareService.removeUser(shareId, username, callerUserId);
 		return ResponseEntity.noContent().build();
 	}
 
