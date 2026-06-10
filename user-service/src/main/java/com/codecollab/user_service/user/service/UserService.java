@@ -1,6 +1,7 @@
 package com.codecollab.user_service.user.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,6 +36,15 @@ public class UserService extends BaseService {
 				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
 						messages.get("error.user.username.not.found", username)));
 		return modelMapper.map(user, UserLookupDto.class);
+	}
+
+	public List<UserLookupDto> lookupByIds(List<UUID> ids) {
+		if (ids == null || ids.isEmpty()) {
+			return List.of();
+		}
+		return userRepository.findAllById(ids).stream()
+				.map(user -> modelMapper.map(user, UserLookupDto.class))
+				.toList();
 	}
 
 	public UserResponseDto update(UUID id, UserUpdateDto dto, UUID callerUserId) {

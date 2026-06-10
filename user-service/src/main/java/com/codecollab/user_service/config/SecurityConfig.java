@@ -29,7 +29,7 @@ public class SecurityConfig {
 						.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll()
-						.requestMatchers(HttpMethod.GET, "/api/v1/users/by-username/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/v1/users/by-username/**", "/api/v1/users/lookup").permitAll()
 						.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**").permitAll()
 						.anyRequest().authenticated())
 				.exceptionHandling(ex -> ex

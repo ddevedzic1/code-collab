@@ -2,8 +2,10 @@ package com.codecollab.snippet_service.share.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -104,9 +106,29 @@ public class ShareService extends BaseService {
 	@Transactional(readOnly = true)
 	public List<ShareUserResponseDto> getUsers(UUID shareId, UUID callerUserId) {
 		getOwnedShare(shareId, callerUserId);
-		return snippetShareUserRepository.findBySnippetShareId(shareId).stream()
+		var responses = snippetShareUserRepository.findBySnippetShareId(shareId).stream()
 				.map(this::toUserResponseDto)
 				.toList();
+
+		var usernamesById = resolveUsernames(responses.stream()
+				.map(ShareUserResponseDto::getUserId)
+				.toList());
+		responses.forEach(response -> response.setUsername(usernamesById.get(response.getUserId())));
+
+		return responses;
+	}
+
+	private Map<UUID, String> resolveUsernames(List<UUID> userIds) {
+		if (userIds.isEmpty()) {
+			return Map.of();
+		}
+		try {
+			return userClient.lookupByIds(userIds).stream()
+					.collect(Collectors.toMap(UserLookupClientDto::getId, UserLookupClientDto::getUsername));
+		} catch (Exception ex) {
+			log.warn("Failed to resolve usernames for share users: {}", ex.getMessage());
+			return Map.of();
+		}
 	}
 
 	@Transactional
