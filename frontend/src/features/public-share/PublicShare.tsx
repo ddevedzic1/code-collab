@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Badge,
   Box,
+  Button,
   Center,
   Flex,
   Heading,
@@ -9,12 +10,14 @@ import {
   Tag,
   Text,
 } from '@chakra-ui/react';
-import { FiEdit2, FiEye, FiLock } from 'react-icons/fi';
+import { FiEdit2, FiEye, FiHome, FiLock } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { CodeEditor } from '../../components/CodeEditor';
 import { LoadingButton } from '../../components/LoadingButton';
 import { Spinner } from '../../components/Spinner';
 import { useSharedSnippet } from '../../hooks/useSharedSnippet';
 import { useSubmit } from '../../hooks/useSubmit';
+import { useAuth } from '../../context/auth/useAuth';
 import { snippetsApi } from '../../api/snippetsApi';
 import { isAppError } from '../../lib/normalizeError';
 import { Permission, permissionLabel } from '../../types/share';
@@ -26,6 +29,11 @@ interface PublicShareProps {
 export const PublicShare = ({ token }: PublicShareProps) => {
   const { shared, loading, error } = useSharedSnippet(token);
   const { submitting, run } = useSubmit();
+  const { status } = useAuth();
+  const navigate = useNavigate();
+
+  const homePath = status === 'authed' ? '/dashboard' : '/login';
+  const goHome = () => navigate(homePath);
 
   const [content, setContent] = useState('');
 
@@ -63,13 +71,20 @@ export const PublicShare = ({ token }: PublicShareProps) => {
                 ? 'Snippet not found'
                 : 'Unable to load snippet'}
           </Heading>
-          <Text fontSize="sm" color="textColor.medium">
+          <Text fontSize="sm" color="textColor.medium" mb={5}>
             {isForbidden
               ? 'You do not have permission to view this shared snippet.'
               : isNotFound
                 ? 'This share link is invalid or has been removed.'
                 : (error?.message ?? 'Please try again later.')}
           </Text>
+          <Button
+            colorScheme="blue"
+            leftIcon={<FiHome />}
+            onClick={goHome}
+          >
+            {status === 'authed' ? 'Go to dashboard' : 'Go to sign in'}
+          </Button>
         </Box>
       </Center>
     );
@@ -95,7 +110,12 @@ export const PublicShare = ({ token }: PublicShareProps) => {
         flexShrink={0}
         gap={3}
       >
-        <HStack spacing={2}>
+        <HStack
+          spacing={2}
+          cursor="pointer"
+          onClick={goHome}
+          title="CodeCollab"
+        >
           <Box color="brand.500" fontWeight="bold">
             {'</>'}
           </Box>
@@ -124,6 +144,14 @@ export const PublicShare = ({ token }: PublicShareProps) => {
         </Tag>
 
         <Box flex="1" />
+
+        <Button
+          variant="ghost"
+          leftIcon={<FiHome />}
+          onClick={goHome}
+        >
+          {status === 'authed' ? 'Dashboard' : 'Sign in'}
+        </Button>
 
         {canEdit ? (
           <LoadingButton colorScheme="blue" onClick={handleSave} isLoading={submitting}>
