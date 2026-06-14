@@ -98,6 +98,17 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
     [loadExisting]
   );
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
+
   return (
     <Flex direction="column" h="100%">
       <EditorTopBar
