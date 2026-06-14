@@ -26,12 +26,12 @@ public class ExecutionPhaseService {
 	private final SagaEventPublisher sagaEventPublisher;
 
 	@Transactional
-	public boolean markRunning(UUID executionId) {
+	public ExecutionContext markRunning(UUID executionId) {
 		var execution = executionRepository.findById(executionId)
 				.orElseThrow(() -> new IllegalStateException("Execution not found: " + executionId));
 		if (execution.getStatus() != ExecutionStatus.PENDING) {
 			log.warn("Skipping execution {} in non-PENDING status {}", executionId, execution.getStatus());
-			return false;
+			return null;
 		}
 		execution.setStatus(ExecutionStatus.RUNNING);
 		executionRepository.save(execution);
@@ -40,7 +40,7 @@ public class ExecutionPhaseService {
 			queueEntry.setStatus(QueueStatus.PROCESSING);
 			executionQueueRepository.save(queueEntry);
 		});
-		return true;
+		return new ExecutionContext(execution.getRuntimeImage(), execution.getCodeSnapshot());
 	}
 
 	@Transactional

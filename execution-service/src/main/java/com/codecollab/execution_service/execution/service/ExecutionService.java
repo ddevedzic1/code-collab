@@ -50,11 +50,20 @@ public class ExecutionService extends BaseService {
 	public ExecutionResponseDto submit(ExecutionSubmitDto dto, UUID callerUserId) {
 		var snippet = fetchSnippet(dto.getSnippetId(), callerUserId);
 
+		var language = snippet.getLanguage();
+		if (language == null || language.getRuntimeImage() == null || language.getRuntimeImage().isBlank()) {
+			log.warn("Snippet {} language {} has no runtime image configured",
+					snippet.getId(), language != null ? language.getId() : null);
+			throw new AppException(AppException.VALIDATION_ERROR,
+					messages.get("error.execution.language.not.runnable"));
+		}
+
 		var execution = new Execution();
 		execution.setUserId(callerUserId);
 		execution.setSnippetId(snippet.getId());
-		execution.setLanguageId(snippet.getLanguage().getId());
+		execution.setLanguageId(language.getId());
 		execution.setCodeSnapshot(snippet.getContent());
+		execution.setRuntimeImage(language.getRuntimeImage());
 		execution.setStatus(ExecutionStatus.PENDING);
 		execution.setAuditState(AuditState.PENDING_AUDIT);
 		var savedExecution = executionRepository.save(execution);

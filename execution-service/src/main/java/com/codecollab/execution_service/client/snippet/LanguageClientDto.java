@@ -11,4 +11,5 @@ import lombok.Data;
 public class LanguageClientDto {
 
 	private UUID id;
+	private String runtimeImage;
 }

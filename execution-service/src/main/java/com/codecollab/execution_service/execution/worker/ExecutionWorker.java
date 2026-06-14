@@ -1,7 +1,6 @@
 package com.codecollab.execution_service.execution.worker;
 
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
@@ -14,39 +13,36 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ExecutionWorker {
 
-	private static final int SUCCESS_PERCENT = 80;
-	private static final int MIN_DURATION_MS = 500;
-	private static final int MAX_DURATION_MS = 2000;
-
 	private final ExecutionPhaseService phaseService;
+	private final DockerExecutionRunner dockerExecutionRunner;
 
 	@RabbitListener(queues = "${app.rabbitmq.execution.queue}")
 	public void process(ExecutionMessage message) {
 		var executionId = message.executionId();
 		log.info("Worker picked up execution {}", executionId);
 		try {
-			if (!phaseService.markRunning(executionId)) {
+			var context = phaseService.markRunning(executionId);
+			if (context == null) {
 				return;
 			}
-			runMockedExecution(executionId);
+			runDockerExecution(executionId, context);
 		} catch (Exception ex) {
 			log.error("Worker failed processing execution {}", executionId, ex);
-			phaseService.markFailed(executionId, ex.getMessage());
+			phaseService.markFailed(executionId, "Execution could not be completed due to an internal error.");
 		}
 	}
 
-	private void runMockedExecution(UUID executionId) throws InterruptedException {
-		var start = System.currentTimeMillis();
-		var sleepMs = ThreadLocalRandom.current().nextInt(MIN_DURATION_MS, MAX_DURATION_MS + 1);
-		Thread.sleep(sleepMs);
-		var success = ThreadLocalRandom.current().nextInt(100) < SUCCESS_PERCENT;
-		var durationMs = (int) (System.currentTimeMillis() - start);
-
-		if (success) {
-			phaseService.markCompleted(executionId, "Hello from mocked execution!\n", null, 0, durationMs);
-		} else {
-			phaseService.markCompleted(executionId, null, "Mock failure: simulated runtime error\n", 1, durationMs);
+	private void runDockerExecution(UUID executionId, ExecutionContext context) {
+		if (context.runtimeImage() == null || context.runtimeImage().isBlank()) {
+			log.warn("Execution {} has no runtime image; marking failed", executionId);
+			phaseService.markFailed(executionId, "No runtime image was configured for this execution.");
+			return;
 		}
-		log.info("Finished execution {} ({} ms)", executionId, durationMs);
+
+		var result = dockerExecutionRunner.run(executionId, context.runtimeImage(), context.codeSnapshot());
+		phaseService.markCompleted(executionId, result.stdout(), result.stderr(),
+				result.exitCode(), result.durationMs());
+		log.info("Finished execution {} (exit {}, {} ms, timedOut={})",
+				executionId, result.exitCode(), result.durationMs(), result.timedOut());
 	}
 }

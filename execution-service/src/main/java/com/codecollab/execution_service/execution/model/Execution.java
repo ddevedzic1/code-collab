@@ -42,6 +42,9 @@ public class Execution {
 	@Column(name = "code_snapshot", nullable = false, columnDefinition = "TEXT")
 	private String codeSnapshot;
 
+	@Column(name = "runtime_image", length = 300)
+	private String runtimeImage;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 30)
 	private ExecutionStatus status;

@@ -11,4 +11,5 @@ public class SnippetLanguageDto {
 	private String code;
 	private String name;
 	private String version;
+	private String runtimeImage;
 }

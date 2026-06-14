@@ -23,6 +23,7 @@ Table executions {
   user_id uuid [not null, note: 'Logical reference to user-service users.id; no DB FK across services']
   language_id uuid [not null, note: 'Logical reference to snippet-service languages.id; no DB FK across services']
   code_snapshot text [not null, note: 'Snapshot of source code at submission time']
+  runtime_image varchar(300) [note: 'Snapshot of the Docker image (e.g. python:3.11-slim) from snippet-service languages.runtime_image at submission time']
   status execution_status_enum [not null, default: 'PENDING']
   audit_state audit_state_enum [not null, default: 'FINALIZED', note: 'Saga state for the execution-finalization audit choreography']
   stdout text
