@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Flex, useDisclosure } from '@chakra-ui/react';
+import { Box, Flex, useDisclosure, useToast } from '@chakra-ui/react';
 import { EditorTopBar } from './components/EditorTopBar';
 import { RightPanelTabs } from './components/RightPanelTabs';
 import { ShareModal } from './share-modal/ShareModal';
 import { CodeEditor } from '../../components/CodeEditor';
 import { Spinner } from '../../components/Spinner';
 import { ErrorMessage } from '../../components/ErrorMessage';
+import { errorToast } from '../../components/toast';
 import { useSnippet } from '../../hooks/useSnippet';
 import { useExecution } from '../../hooks/useExecution';
 import { useSubmit } from '../../hooks/useSubmit';
@@ -24,6 +25,7 @@ interface EditorViewProps {
 
 const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
   const shareModal = useDisclosure();
+  const toast = useToast();
   const { languages } = useLanguages();
 
   const [title, setTitle] = useState(snippet.title);
@@ -34,8 +36,9 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
   const [tabIndex, setTabIndex] = useState(OUTPUT_TAB);
   const [historyRefreshToken, setHistoryRefreshToken] = useState(0);
 
-  const { execution, isRunning, error: executionError, run, loadExisting } =
-    useExecution(snippet.id);
+  const { execution, isRunning, run, loadExisting } = useExecution(snippet.id, {
+    onError: error => toast(errorToast(error)),
+  });
 
   useEffect(() => {
     if (execution && isTerminalStatus(execution.status)) {
@@ -132,7 +135,6 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
           <RightPanelTabs
             snippetId={snippet.id}
             execution={execution}
-            executionError={executionError}
             historyRefreshToken={historyRefreshToken}
             tabIndex={tabIndex}
             onTabChange={setTabIndex}

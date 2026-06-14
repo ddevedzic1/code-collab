@@ -9,12 +9,10 @@ import {
 import { OutputPanel } from './OutputPanel';
 import { HistoryPanel } from './HistoryPanel';
 import type { Execution } from '../../../types/execution';
-import type { AppError } from '../../../types/api';
 
 interface RightPanelTabsProps {
   snippetId: string;
   execution: Execution | null;
-  executionError: AppError | null;
   historyRefreshToken: number;
   tabIndex: number;
   onTabChange: (index: number) => void;
@@ -24,7 +22,6 @@ interface RightPanelTabsProps {
 export const RightPanelTabs = ({
   snippetId,
   execution,
-  executionError,
   historyRefreshToken,
   tabIndex,
   onTabChange,
@@ -47,7 +44,7 @@ export const RightPanelTabs = ({
     <TabPanels flex="1" overflow="hidden">
       <TabPanel p={0} h="100%">
         <Box h="100%">
-          <OutputPanel execution={execution} error={executionError} />
+          <OutputPanel execution={execution} />
         </Box>
       </TabPanel>
       <TabPanel p={0} h="100%">

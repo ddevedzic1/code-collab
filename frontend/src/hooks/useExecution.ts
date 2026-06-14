@@ -9,11 +9,16 @@ import type { AppError } from '../types/api';
 
 const POLL_INTERVAL_MS = 2000;
 
+interface UseExecutionOptions {
+  /** Called when a submit or poll request fails (excluding globally-handled
+   * errors like 401). The caller decides how to surface it (e.g. a toast). */
+  onError?: (error: AppError) => void;
+}
+
 interface UseExecutionResult {
   execution: Execution | null;
   /** A run was submitted or a poll is scheduled / in flight. */
   isRunning: boolean;
-  error: AppError | null;
   /** Submit a new execution for the snippet and start polling. */
   run: (snippetId: string) => Promise<void>;
   /** Load a finished or in-progress execution (resumes polling if needed). */
@@ -21,15 +26,19 @@ interface UseExecutionResult {
 }
 
 /** Runs a snippet and polls its execution until it reaches a terminal state. */
-export const useExecution = (snippetId: string | undefined): UseExecutionResult => {
+export const useExecution = (
+  snippetId: string | undefined,
+  options: UseExecutionOptions = {}
+): UseExecutionResult => {
   const [execution, setExecution] = useState<Execution | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [error, setError] = useState<AppError | null>(null);
 
   const mountedRef = useRef(true);
   const timeoutRef = useRef<number | undefined>(undefined);
   const abortRef = useRef<AbortController | undefined>(undefined);
   const currentIdRef = useRef<string | undefined>(undefined);
+  const onErrorRef = useRef(options.onError);
+  onErrorRef.current = options.onError;
 
   const stopPolling = useCallback(() => {
     if (timeoutRef.current !== undefined) {
@@ -81,7 +90,7 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
           return;
         }
         if (isAppError(err)) {
-          setError(err);
+          onErrorRef.current?.(err);
         }
         setIsRunning(false);
       }
@@ -92,7 +101,6 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
   const run = useCallback(
     async (targetSnippetId: string) => {
       stopPolling();
-      setError(null);
       setIsRunning(true);
 
       try {
@@ -122,7 +130,7 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
           return;
         }
         if (isAppError(err)) {
-          setError(err);
+          onErrorRef.current?.(err);
         }
         setIsRunning(false);
       }
@@ -133,7 +141,6 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
   const loadExisting = useCallback(
     (existing: Execution) => {
       stopPolling();
-      setError(null);
       currentIdRef.current = existing.id;
       setExecution(existing);
 
@@ -155,7 +162,6 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
     currentIdRef.current = undefined;
     setExecution(null);
     setIsRunning(false);
-    setError(null);
   }, [snippetId, stopPolling]);
 
   useEffect(() => {
@@ -166,5 +172,5 @@ export const useExecution = (snippetId: string | undefined): UseExecutionResult 
     };
   }, [stopPolling]);
 
-  return { execution, isRunning, error, run, loadExisting };
+  return { execution, isRunning, run, loadExisting };
 };

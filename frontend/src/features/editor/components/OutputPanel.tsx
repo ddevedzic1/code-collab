@@ -7,13 +7,10 @@ import {
 } from '@chakra-ui/react';
 import { FiTerminal } from 'react-icons/fi';
 import { StatusBadge } from './StatusBadge';
-import { ErrorMessage } from '../../../components/ErrorMessage';
 import type { Execution } from '../../../types/execution';
-import type { AppError } from '../../../types/api';
 
 interface OutputPanelProps {
   execution: Execution | null;
-  error: AppError | null;
 }
 
 interface OutputStreamProps {
@@ -53,15 +50,7 @@ const OutputStream = ({ label, content, tone = 'normal' }: OutputStreamProps) =>
   </Box>
 );
 
-export const OutputPanel = ({ execution, error }: OutputPanelProps) => {
-  if (error) {
-    return (
-      <Box p={4}>
-        <ErrorMessage error={error} />
-      </Box>
-    );
-  }
-
+export const OutputPanel = ({ execution }: OutputPanelProps) => {
   if (!execution) {
     return (
       <Center h="100%" flexDirection="column" color="textColor.medium" px={4}>
