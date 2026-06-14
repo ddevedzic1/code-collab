@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Box, Flex, useDisclosure, useToast } from '@chakra-ui/react';
+import {
+  Box,
+  Flex,
+  IconButton,
+  useDisclosure,
+  useToast,
+} from '@chakra-ui/react';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { EditorTopBar } from './components/EditorTopBar';
 import { RightPanelTabs } from './components/RightPanelTabs';
 import { ShareModal } from './share-modal/ShareModal';
@@ -24,6 +31,7 @@ interface EditorViewProps {
 
 const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
   const shareModal = useDisclosure();
+  const sidePanel = useDisclosure({ defaultIsOpen: true });
   const toast = useToast();
 
   const [title, setTitle] = useState(snippet.title);
@@ -133,22 +141,54 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
           />
         </Box>
 
-        <Box
-          w="420px"
-          borderLeftWidth="1px"
-          borderColor="gray.700"
-          bg="gray.800"
-          flexShrink={0}
-        >
-          <RightPanelTabs
-            snippetId={snippet.id}
-            execution={execution}
-            historyRefreshToken={historyRefreshToken}
-            tabIndex={tabIndex}
-            onTabChange={setTabIndex}
-            onSelectExecution={handleSelectExecution}
-          />
-        </Box>
+        {sidePanel.isOpen ? (
+          <Box
+            w={{ base: '100%', md: '420px' }}
+            maxW={{ base: '70%', md: '420px' }}
+            borderLeftWidth="1px"
+            borderColor="gray.700"
+            bg="gray.800"
+            flexShrink={0}
+            position="relative"
+          >
+            <IconButton
+              aria-label="Collapse panel"
+              icon={<FiChevronRight />}
+              size="xs"
+              variant="ghost"
+              position="absolute"
+              top={0.5}
+              right={2}
+              zIndex={1}
+              onClick={sidePanel.onClose}
+            />
+            <RightPanelTabs
+              snippetId={snippet.id}
+              execution={execution}
+              historyRefreshToken={historyRefreshToken}
+              tabIndex={tabIndex}
+              onTabChange={setTabIndex}
+              onSelectExecution={handleSelectExecution}
+            />
+          </Box>
+        ) : (
+          <Flex
+            borderLeftWidth="1px"
+            borderColor="gray.700"
+            bg="gray.800"
+            flexShrink={0}
+            align="center"
+            justify="center"
+          >
+            <IconButton
+              aria-label="Show output panel"
+              icon={<FiChevronLeft />}
+              size="sm"
+              variant="ghost"
+              onClick={sidePanel.onOpen}
+            />
+          </Flex>
+        )}
       </Flex>
 
       <ShareModal
