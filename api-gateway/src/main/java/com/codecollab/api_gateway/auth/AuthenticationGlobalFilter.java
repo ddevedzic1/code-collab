@@ -57,6 +57,13 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
 			return unauthorized(exchange);
 		}
 
+		return resolveAuthenticatedExchange(sanitizedExchange, cookieHeader, isPublic, path)
+				.switchIfEmpty(Mono.defer(() -> unauthorized(exchange).then(Mono.empty())))
+				.flatMap(chain::filter);
+	}
+
+	private Mono<ServerWebExchange> resolveAuthenticatedExchange(ServerWebExchange sanitizedExchange,
+			String cookieHeader, boolean isPublic, String path) {
 		return webClient.get()
 				.uri(VALIDATE_URI)
 				.header(HttpHeaders.COOKIE, cookieHeader)
@@ -64,16 +71,15 @@ public class AuthenticationGlobalFilter implements GlobalFilter, Ordered {
 				.bodyToMono(SessionUserDto.class)
 				.flatMap(sessionUser -> {
 					if (sessionUser == null || sessionUser.getId() == null) {
-						return isPublic ? chain.filter(sanitizedExchange) : unauthorized(exchange);
+						return isPublic ? Mono.just(sanitizedExchange) : Mono.empty();
 					}
-					var authenticatedExchange = sanitizedExchange.mutate()
+					return Mono.just(sanitizedExchange.mutate()
 							.request(r -> r.header(USER_ID_HEADER, sessionUser.getId().toString()))
-							.build();
-					return chain.filter(authenticatedExchange);
+							.build());
 				})
 				.onErrorResume(ex -> {
 					log.warn("Session validation failed for path {}: {}", path, ex.getMessage());
-					return isPublic ? chain.filter(sanitizedExchange) : unauthorized(exchange);
+					return isPublic ? Mono.just(sanitizedExchange) : Mono.empty();
 				});
 	}
 
