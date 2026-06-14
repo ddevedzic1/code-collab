@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { CodeEditor } from '../../components/CodeEditor';
 import { LoadingButton } from '../../components/LoadingButton';
 import { Spinner } from '../../components/Spinner';
+import { UserMenu } from '../../components/UserMenu';
 import { useSharedSnippet } from '../../hooks/useSharedSnippet';
 import { useSubmit } from '../../hooks/useSubmit';
 import { snippetsApi } from '../../api/snippetsApi';
@@ -172,6 +173,8 @@ export const PublicShare = ({ token }: PublicShareProps) => {
             Save
           </LoadingButton>
         ) : null}
+
+        <UserMenu />
       </Flex>
 
       <Box flex="1" p={4} overflow="hidden">
