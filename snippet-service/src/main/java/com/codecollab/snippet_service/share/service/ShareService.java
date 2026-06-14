@@ -57,11 +57,18 @@ public class ShareService extends BaseService {
 		share.setSnippet(snippet);
 		share.setShareToken(UUID.randomUUID().toString());
 		share.setShareType(dto.getShareType());
-		share.setPermission(dto.getPermission());
+		share.setPermission(resolvePermission(dto));
 		var saved = snippetShareRepository.save(share);
 
 		log.info("Created share {} for snippet {}", saved.getId(), snippetId);
 		return toShareResponseDto(saved);
+	}
+
+	private Permission resolvePermission(ShareCreateDto dto) {
+		if (dto.getPermission() != null) {
+			return dto.getPermission();
+		}
+		return Permission.READ_ONLY;
 	}
 
 	@Transactional(readOnly = true)
