@@ -18,8 +18,10 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { LanguageSelect } from '../../../components/LanguageSelect';
 import { LoadingButton } from '../../../components/LoadingButton';
+import { ErrorMessage } from '../../../components/ErrorMessage';
 import { snippetsApi } from '../../../api/snippetsApi';
 import { useSubmit } from '../../../hooks/useSubmit';
+import { useLanguages } from '../../../hooks/useLanguages';
 import { validateRequired } from '../../../lib/validation';
 
 interface NewSnippetModalProps {
@@ -30,6 +32,9 @@ interface NewSnippetModalProps {
 export const NewSnippetModal = ({ isOpen, onClose }: NewSnippetModalProps) => {
   const navigate = useNavigate();
   const { submitting, run } = useSubmit();
+  const { languages, loading: languagesLoading } = useLanguages();
+
+  const languagesUnavailable = !languagesLoading && languages.length === 0;
 
   const [title, setTitle] = useState('');
   const [languageId, setLanguageId] = useState('');
@@ -107,13 +112,22 @@ export const NewSnippetModal = ({ isOpen, onClose }: NewSnippetModalProps) => {
                 />
                 <FormErrorMessage>{languageError}</FormErrorMessage>
               </FormControl>
+
+              {languagesUnavailable ? (
+                <ErrorMessage error="Languages can't be loaded right now, so a new snippet can't be created. Please try again later." />
+              ) : null}
             </VStack>
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={handleClose} isDisabled={submitting}>
               Cancel
             </Button>
-            <LoadingButton type="submit" colorScheme="blue" isLoading={submitting}>
+            <LoadingButton
+              type="submit"
+              colorScheme="blue"
+              isLoading={submitting}
+              isDisabled={languagesUnavailable}
+            >
               Create
             </LoadingButton>
           </ModalFooter>
