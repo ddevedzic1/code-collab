@@ -9,7 +9,7 @@ import { errorToast } from '../../components/toast';
 import type { AuthUser, LoginRequest, RegisterRequest } from '../../types/auth';
 
 /** Path prefixes where a 401 must NOT bounce the user to /login. */
-const PUBLIC_PATH_PREFIXES = ['/login', '/register', '/s/'];
+const PUBLIC_PATH_PREFIXES = ['/login', '/register'];
 
 const isPublicPath = (pathname: string): boolean =>
   PUBLIC_PATH_PREFIXES.some(prefix => pathname.startsWith(prefix));

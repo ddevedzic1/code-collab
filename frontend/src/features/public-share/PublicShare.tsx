@@ -17,7 +17,6 @@ import { LoadingButton } from '../../components/LoadingButton';
 import { Spinner } from '../../components/Spinner';
 import { useSharedSnippet } from '../../hooks/useSharedSnippet';
 import { useSubmit } from '../../hooks/useSubmit';
-import { useAuth } from '../../context/auth/useAuth';
 import { snippetsApi } from '../../api/snippetsApi';
 import { isAppError } from '../../lib/normalizeError';
 import { Permission, permissionLabel } from '../../types/share';
@@ -29,11 +28,9 @@ interface PublicShareProps {
 export const PublicShare = ({ token }: PublicShareProps) => {
   const { shared, loading, error } = useSharedSnippet(token);
   const { submitting, run } = useSubmit();
-  const { status } = useAuth();
   const navigate = useNavigate();
 
-  const homePath = status === 'authed' ? '/dashboard' : '/login';
-  const goHome = () => navigate(homePath);
+  const goHome = () => navigate('/dashboard');
 
   const [content, setContent] = useState('');
 
@@ -100,7 +97,7 @@ export const PublicShare = ({ token }: PublicShareProps) => {
             leftIcon={<FiHome />}
             onClick={goHome}
           >
-            {status === 'authed' ? 'Go to dashboard' : 'Go to sign in'}
+            Go to dashboard
           </Button>
         </Box>
       </Center>
@@ -167,7 +164,7 @@ export const PublicShare = ({ token }: PublicShareProps) => {
           leftIcon={<FiHome />}
           onClick={goHome}
         >
-          {status === 'authed' ? 'Dashboard' : 'Sign in'}
+          Dashboard
         </Button>
 
         {canEdit ? (

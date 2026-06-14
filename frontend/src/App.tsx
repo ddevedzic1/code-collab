@@ -13,13 +13,12 @@ const App = () => (
     {/* Public routes */}
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
-    <Route path="/s/:token" element={<PublicSharePage />} />
 
-    {/* Protected routes */}
     <Route element={<ProtectedRoute />}>
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/editor/:snippetId" element={<EditorPage />} />
       <Route path="/account" element={<AccountPage />} />
+      <Route path="/s/:token" element={<PublicSharePage />} />
     </Route>
 
     {/* Defaults */}

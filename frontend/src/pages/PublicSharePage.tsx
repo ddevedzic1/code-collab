@@ -5,7 +5,7 @@ export const PublicSharePage = () => {
   const { token } = useParams<{ token: string }>();
 
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <PublicShare token={token} />;
