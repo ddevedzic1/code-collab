@@ -11,6 +11,11 @@ import com.codecollab.snippet_service.exception.AppException;
 import com.codecollab.snippet_service.language.model.Language;
 import com.codecollab.snippet_service.language.repository.LanguageRepository;
 import com.codecollab.snippet_service.service.BaseService;
+import com.codecollab.snippet_service.share.model.Permission;
+import com.codecollab.snippet_service.share.model.ShareType;
+import com.codecollab.snippet_service.share.model.SnippetShare;
+import com.codecollab.snippet_service.share.repository.SnippetShareRepository;
+import com.codecollab.snippet_service.share.repository.SnippetShareUserRepository;
 import com.codecollab.snippet_service.snippet.dto.SnippetCreateDto;
 import com.codecollab.snippet_service.snippet.dto.SnippetResponseDto;
 import com.codecollab.snippet_service.snippet.dto.SnippetUpdateDto;
@@ -28,6 +33,8 @@ public class SnippetService extends BaseService {
 
 	private final SnippetRepository snippetRepository;
 	private final LanguageRepository languageRepository;
+	private final SnippetShareRepository snippetShareRepository;
+	private final SnippetShareUserRepository snippetShareUserRepository;
 
 	@Transactional(readOnly = true)
 	public PageResult<SnippetResponseDto> search(UUID callerUserId, String title, UUID languageId, Pageable pageable) {
@@ -60,7 +67,7 @@ public class SnippetService extends BaseService {
 
 	@Transactional
 	public SnippetResponseDto update(UUID id, SnippetUpdateDto dto, UUID callerUserId) {
-		var snippet = findOwnedSnippet(id, callerUserId);
+		var snippet = findEditableSnippet(id, callerUserId);
 
 		if (dto.getLanguageId() != null && !dto.getLanguageId().equals(snippet.getLanguage().getId())) {
 			snippet.setLanguage(findActiveLanguage(dto.getLanguageId()));
@@ -94,6 +101,36 @@ public class SnippetService extends BaseService {
 					messages.get("error.snippet.forbidden"));
 		}
 		return snippet;
+	}
+
+	private Snippet findEditableSnippet(UUID id, UUID callerUserId) {
+		var snippet = snippetRepository.findActiveById(id)
+				.orElseThrow(() -> new AppException(AppException.NOT_FOUND_ERROR,
+						messages.get("error.snippet.not.found")));
+		if (snippet.getUserId().equals(callerUserId) || hasEditShare(id, callerUserId)) {
+			return snippet;
+		}
+		throw new AppException(AppException.FORBIDDEN_ERROR,
+				messages.get("error.snippet.forbidden"));
+	}
+
+	private boolean hasEditShare(UUID snippetId, UUID callerUserId) {
+		if (callerUserId == null) {
+			return false;
+		}
+		return snippetShareRepository.findBySnippetId(snippetId)
+				.map(share -> grantsEdit(share, callerUserId))
+				.orElse(false);
+	}
+
+	private boolean grantsEdit(SnippetShare share, UUID callerUserId) {
+		if (share.getShareType() == ShareType.USER) {
+			return snippetShareUserRepository
+					.findBySnippetShareIdAndUserId(share.getId(), callerUserId)
+					.map(shareUser -> shareUser.getPermission() == Permission.EDIT)
+					.orElse(false);
+		}
+		return share.getPermission() == Permission.EDIT;
 	}
 
 	private Language findActiveLanguage(UUID languageId) {
