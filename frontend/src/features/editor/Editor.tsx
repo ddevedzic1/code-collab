@@ -29,6 +29,7 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
   const [title, setTitle] = useState(snippet.title);
   const [content, setContent] = useState(snippet.content);
   const { submitting: saving, run: runSave } = useSubmit();
+  const { run: runTitleSave } = useSubmit();
 
   const [tabIndex, setTabIndex] = useState(OUTPUT_TAB);
   const [historyRefreshToken, setHistoryRefreshToken] = useState(0);
@@ -60,6 +61,24 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
       }
     );
   }, [runSave, isDirty, snippet.id, title, content, onSnippetSaved]);
+
+  const handleTitleCommit = useCallback(
+    (nextTitle: string) => {
+      setTitle(nextTitle);
+      const trimmed = nextTitle.trim();
+      if (trimmed === '' || trimmed === snippet.title) {
+        return;
+      }
+      runTitleSave(
+        () => snippetsApi.updateSnippet(snippet.id, { title: trimmed }),
+        {
+          successMessage: 'Title saved.',
+          onSuccess: updated => onSnippetSaved(updated),
+        }
+      );
+    },
+    [runTitleSave, snippet.id, snippet.title, onSnippetSaved]
+  );
 
   const handleRun = useCallback(async () => {
     setTabIndex(OUTPUT_TAB);
@@ -93,7 +112,7 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
     <Flex direction="column" h="100%">
       <EditorTopBar
         title={title}
-        onTitleCommit={setTitle}
+        onTitleCommit={handleTitleCommit}
         language={snippet.language}
         onSave={handleSave}
         onRun={handleRun}
