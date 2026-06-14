@@ -17,9 +17,9 @@ export const Account = () => {
 
       {error ? <ErrorMessage error={error} /> : null}
 
-      {loading || !user ? (
+      {loading && !error ? (
         <Spinner label="Loading account…" />
-      ) : (
+      ) : user ? (
         <>
           <ProfileSection
             user={user}
@@ -29,7 +29,7 @@ export const Account = () => {
           <PasswordSection onUpdate={updateUser} />
           <DangerZone onDelete={deleteUser} />
         </>
-      )}
+      ) : null}
     </VStack>
   );
 };
