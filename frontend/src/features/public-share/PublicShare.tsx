@@ -43,6 +43,23 @@ export const PublicShare = ({ token }: PublicShareProps) => {
     }
   }, [shared]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        if (shared?.permission !== Permission.EDIT) {
+          return;
+        }
+        run(
+          () => snippetsApi.updateSnippet(shared.snippetId, { content }),
+          { successMessage: 'Changes saved.' }
+        );
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [shared, content, run]);
+
   if (loading) {
     return <Spinner full label="Loading shared snippet…" />;
   }
