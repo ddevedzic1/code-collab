@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Box, Flex, useDisclosure, useToast } from '@chakra-ui/react';
 import { EditorTopBar } from './components/EditorTopBar';
 import { RightPanelTabs } from './components/RightPanelTabs';
@@ -11,7 +11,6 @@ import { useSnippet } from '../../hooks/useSnippet';
 import { useExecution } from '../../hooks/useExecution';
 import { useSubmit } from '../../hooks/useSubmit';
 import { snippetsApi } from '../../api/snippetsApi';
-import { useLanguages } from '../../hooks/useLanguages';
 import { isTerminalStatus } from '../../types/execution';
 import type { Execution } from '../../types/execution';
 import type { Snippet } from '../../types/snippet';
@@ -26,11 +25,9 @@ interface EditorViewProps {
 const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
   const shareModal = useDisclosure();
   const toast = useToast();
-  const { languages } = useLanguages();
 
   const [title, setTitle] = useState(snippet.title);
   const [content, setContent] = useState(snippet.content);
-  const [languageId, setLanguageId] = useState(snippet.language.id);
   const { submitting: saving, run: runSave } = useSubmit();
 
   const [tabIndex, setTabIndex] = useState(OUTPUT_TAB);
@@ -47,15 +44,7 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
   }, [execution?.status, execution?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isDirty =
-    title !== snippet.title ||
-    content !== snippet.content ||
-    languageId !== snippet.language.id;
-
-  const selectedLanguage = useMemo(
-    () =>
-      languages.find(lang => lang.id === languageId) ?? snippet.language,
-    [languages, languageId, snippet.language]
-  );
+    title !== snippet.title || content !== snippet.content;
 
   const handleSave = useCallback(async () => {
     await runSave(
@@ -63,7 +52,6 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
         snippetsApi.updateSnippet(snippet.id, {
           title: title.trim(),
           content,
-          languageId,
         }),
       {
         guard: () => isDirty,
@@ -71,15 +59,7 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
         onSuccess: updated => onSnippetSaved(updated),
       }
     );
-  }, [
-    runSave,
-    isDirty,
-    snippet.id,
-    title,
-    content,
-    languageId,
-    onSnippetSaved,
-  ]);
+  }, [runSave, isDirty, snippet.id, title, content, onSnippetSaved]);
 
   const handleRun = useCallback(async () => {
     setTabIndex(OUTPUT_TAB);
@@ -114,9 +94,7 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
       <EditorTopBar
         title={title}
         onTitleCommit={setTitle}
-        languageId={languageId}
-        currentLanguage={snippet.language}
-        onLanguageChange={setLanguageId}
+        language={snippet.language}
         onSave={handleSave}
         onRun={handleRun}
         onShare={shareModal.onOpen}
@@ -130,7 +108,7 @@ const EditorView = ({ snippet, onSnippetSaved }: EditorViewProps) => {
           <CodeEditor
             value={content}
             onChange={setContent}
-            languageCode={selectedLanguage.code}
+            languageCode={snippet.language.code}
             height="100%"
             placeholder="Write your code here…"
           />

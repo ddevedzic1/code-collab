@@ -1,4 +1,5 @@
 import {
+  Badge,
   Box,
   Button,
   HStack,
@@ -8,16 +9,13 @@ import {
 import { FiArrowLeft, FiPlay, FiSave, FiShare2 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { ControlledInput } from '../../../components/ControlledInput';
-import { LanguageSelect } from '../../../components/LanguageSelect';
 import { LoadingButton } from '../../../components/LoadingButton';
 import type { SnippetLanguage } from '../../../types/language';
 
 interface EditorTopBarProps {
   title: string;
   onTitleCommit: (title: string) => void;
-  languageId: string;
-  currentLanguage: SnippetLanguage;
-  onLanguageChange: (languageId: string) => void;
+  language: SnippetLanguage;
   onSave: () => void;
   onRun: () => void;
   onShare: () => void;
@@ -29,9 +27,7 @@ interface EditorTopBarProps {
 export const EditorTopBar = ({
   title,
   onTitleCommit,
-  languageId,
-  currentLanguage,
-  onLanguageChange,
+  language,
   onSave,
   onRun,
   onShare,
@@ -75,12 +71,18 @@ export const EditorTopBar = ({
         />
       </Box>
 
-      <LanguageSelect
-        value={languageId}
-        fallbackLanguage={currentLanguage}
-        w="200px"
-        onChange={event => onLanguageChange(event.target.value)}
-      />
+      <Badge
+        colorScheme="blue"
+        variant="subtle"
+        textTransform="none"
+        fontWeight="normal"
+        px={2}
+        py={1}
+        borderRadius="md"
+      >
+        {language.name}
+        {language.version ? ` (${language.version})` : ''}
+      </Badge>
 
       <Box flex="1" />
 
