@@ -54,7 +54,7 @@ export const ShareCreateForm = ({ onCreate }: ShareCreateFormProps) => {
         >
           <Stack spacing={2}>
             <Radio value={ShareType.PUBLIC_LINK}>
-              Public link — anyone with the link
+              Public link — any signed-in user with the link
             </Radio>
             <Radio value={ShareType.USER}>
               Specific users — only people you add
