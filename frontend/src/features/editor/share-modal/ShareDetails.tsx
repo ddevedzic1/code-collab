@@ -113,27 +113,29 @@ export const ShareDetails = ({
           </Select>
         </FormControl>
 
-        <FormControl>
-          <FormLabel fontSize="sm">Default permission</FormLabel>
-          <Select
-            value={share.permission}
-            isDisabled={permissionSubmit.submitting}
-            onChange={event =>
-              permissionSubmit.run(
-                () =>
-                  onUpdate({ permission: event.target.value as Permission }),
-                { successMessage: 'Share updated.' }
-              )
-            }
-          >
-            <option value={Permission.READ_ONLY}>
-              {permissionLabel(Permission.READ_ONLY)}
-            </option>
-            <option value={Permission.EDIT}>
-              {permissionLabel(Permission.EDIT)}
-            </option>
-          </Select>
-        </FormControl>
+        {share.shareType === ShareType.PUBLIC_LINK ? (
+          <FormControl>
+            <FormLabel fontSize="sm">Permission</FormLabel>
+            <Select
+              value={share.permission ?? Permission.READ_ONLY}
+              isDisabled={permissionSubmit.submitting}
+              onChange={event =>
+                permissionSubmit.run(
+                  () =>
+                    onUpdate({ permission: event.target.value as Permission }),
+                  { successMessage: 'Share updated.' }
+                )
+              }
+            >
+              <option value={Permission.READ_ONLY}>
+                {permissionLabel(Permission.READ_ONLY)}
+              </option>
+              <option value={Permission.EDIT}>
+                {permissionLabel(Permission.EDIT)}
+              </option>
+            </Select>
+          </FormControl>
+        ) : null}
       </HStack>
 
       {share.shareType === ShareType.USER ? (

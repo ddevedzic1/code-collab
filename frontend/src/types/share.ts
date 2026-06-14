@@ -26,12 +26,14 @@ export interface Share {
   snippetId: string;
   shareToken: string;
   shareType: ShareType;
-  permission: Permission;
+  /** May be null for USER shares, where per-user permissions apply instead. */
+  permission: Permission | null;
 }
 
 export interface ShareCreateRequest {
   shareType: ShareType;
-  permission: Permission;
+  /** Required only for PUBLIC_LINK shares; ignored for USER shares. */
+  permission?: Permission;
 }
 
 export interface ShareUpdateRequest {

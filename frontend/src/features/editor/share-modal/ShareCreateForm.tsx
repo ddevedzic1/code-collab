@@ -28,10 +28,16 @@ export const ShareCreateForm = ({ onCreate }: ShareCreateFormProps) => {
     Permission.READ_ONLY
   );
 
+  const isPublicLink = shareType === ShareType.PUBLIC_LINK;
+
   const handleCreate = async () => {
-    await run(() => onCreate({ shareType, permission }), {
-      successMessage: 'Share created.',
-    });
+    await run(
+      () =>
+        onCreate(
+          isPublicLink ? { shareType, permission } : { shareType }
+        ),
+      { successMessage: 'Share created.' }
+    );
   };
 
   return (
@@ -57,22 +63,24 @@ export const ShareCreateForm = ({ onCreate }: ShareCreateFormProps) => {
         </RadioGroup>
       </FormControl>
 
-      <FormControl>
-        <FormLabel fontSize="sm">Default permission</FormLabel>
-        <RadioGroup
-          value={permission}
-          onChange={value => setPermission(value as Permission)}
-        >
-          <Stack direction="row" spacing={4}>
-            <Radio value={Permission.READ_ONLY}>
-              {permissionLabel(Permission.READ_ONLY)}
-            </Radio>
-            <Radio value={Permission.EDIT}>
-              {permissionLabel(Permission.EDIT)}
-            </Radio>
-          </Stack>
-        </RadioGroup>
-      </FormControl>
+      {isPublicLink ? (
+        <FormControl>
+          <FormLabel fontSize="sm">Permission</FormLabel>
+          <RadioGroup
+            value={permission}
+            onChange={value => setPermission(value as Permission)}
+          >
+            <Stack direction="row" spacing={4}>
+              <Radio value={Permission.READ_ONLY}>
+                {permissionLabel(Permission.READ_ONLY)}
+              </Radio>
+              <Radio value={Permission.EDIT}>
+                {permissionLabel(Permission.EDIT)}
+              </Radio>
+            </Stack>
+          </RadioGroup>
+        </FormControl>
+      ) : null}
 
       <LoadingButton
         colorScheme="blue"
