@@ -86,4 +86,22 @@ class ExecutionRepositoryIT extends AbstractRepositoryIT {
 
 		assertThat(page.getTotalElements()).isZero();
 	}
+
+	@Test
+	void search_runsSingleQueryWithoutNPlusOne() {
+		var owner = UUID.randomUUID();
+		persistExecution(owner, UUID.randomUUID(), ExecutionStatus.COMPLETED);
+		persistExecution(owner, UUID.randomUUID(), ExecutionStatus.FAILED);
+		persistExecution(owner, UUID.randomUUID(), ExecutionStatus.RUNNING);
+		entityManager.clear();
+
+		var stats = statistics(entityManager.getEntityManager());
+		stats.clear();
+
+		var page = executionRepository.search(owner, null, null, PageRequest.of(0, 10));
+		page.getContent().forEach(Execution::getCodeSnapshot);
+
+		assertThat(page.getTotalElements()).isEqualTo(3);
+		assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
+	}
 }

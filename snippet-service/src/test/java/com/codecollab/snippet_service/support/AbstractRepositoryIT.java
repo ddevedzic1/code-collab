@@ -1,5 +1,9 @@
 package com.codecollab.snippet_service.support;
 
+import jakarta.persistence.EntityManager;
+
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -40,5 +44,10 @@ public abstract class AbstractRepositoryIT {
 		registry.add("app.database.schema", () -> "snippet_service");
 		registry.add("spring.flyway.default-schema", () -> "snippet_service");
 		registry.add("spring.jpa.properties.hibernate.default_schema", () -> "snippet_service");
+		registry.add("spring.jpa.properties.hibernate.generate_statistics", () -> "true");
+	}
+
+	protected static Statistics statistics(EntityManager entityManager) {
+		return entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
 	}
 }

@@ -90,4 +90,20 @@ class SnippetShareRepositoryIT extends AbstractRepositoryIT {
 
 		assertThat(snippetShareRepository.findByShareToken("tok-4")).isEmpty();
 	}
+
+	@Test
+	void findByShareToken_fetchesSnippetAndLanguageWithoutNPlusOne() {
+		var snippet = persistSnippet();
+		persistShare(snippet, "tok-5");
+		entityManager.clear();
+
+		var stats = statistics(entityManager.getEntityManager());
+		stats.clear();
+
+		var found = snippetShareRepository.findByShareToken("tok-5");
+		found.ifPresent(share -> share.getSnippet().getLanguage().getRuntimeImage());
+
+		assertThat(found).isPresent();
+		assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
+	}
 }

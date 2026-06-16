@@ -14,6 +14,8 @@ import com.codecollab.snippet_service.language.model.Language;
 import com.codecollab.snippet_service.snippet.model.Snippet;
 import com.codecollab.snippet_service.support.AbstractRepositoryIT;
 
+import org.springframework.data.domain.Page;
+
 class SnippetRepositoryIT extends AbstractRepositoryIT {
 
 	@Autowired
@@ -105,5 +107,37 @@ class SnippetRepositoryIT extends AbstractRepositoryIT {
 
 		assertThat(page.getTotalElements()).isEqualTo(1);
 		assertThat(page.getContent().get(0).getTitle()).isEqualTo("Py");
+	}
+
+	@Test
+	void search_fetchesLanguageWithoutNPlusOne() {
+		var owner = UUID.randomUUID();
+		persistSnippet(owner, persistLanguage("py"), "A");
+		persistSnippet(owner, persistLanguage("js"), "B");
+		persistSnippet(owner, persistLanguage("go"), "C");
+		entityManager.clear();
+
+		var stats = statistics(entityManager.getEntityManager());
+		stats.clear();
+
+		Page<Snippet> page = snippetRepository.search(owner, null, null, PageRequest.of(0, 10));
+		page.getContent().forEach(snippet -> snippet.getLanguage().getRuntimeImage());
+
+		assertThat(page.getTotalElements()).isEqualTo(3);
+		assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
+	}
+
+	@Test
+	void findActiveById_fetchesLanguageInSingleQuery() {
+		var snippet = persistSnippet(UUID.randomUUID(), persistLanguage("rb"), "Title");
+		entityManager.clear();
+
+		var stats = statistics(entityManager.getEntityManager());
+		stats.clear();
+
+		var found = snippetRepository.findActiveById(snippet.getId());
+		found.ifPresent(s -> s.getLanguage().getRuntimeImage());
+
+		assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
 	}
 }
