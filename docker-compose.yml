@@ -1,0 +1,165 @@
+name: code-collab
+
+# Shared environment fragments to avoid repetition across services.
+x-postgres-env: &postgres-env
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
+x-rabbitmq-env: &rabbitmq-env
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+
+x-eureka-env: &eureka-env
+  EUREKA_URL: http://eureka-service:8761/eureka/
+
+services:
+  # --- Infrastructure ---
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 256m
+    networks: [code-collab]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    mem_limit: 768m
+    networks: [code-collab]
+
+  # --- Service discovery ---
+  eureka-service:
+    build: ./eureka-service
+    image: code-collab/eureka-service
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    mem_limit: 384m
+    networks: [code-collab]
+
+  # --- API gateway (edge) ---
+  api-gateway:
+    build: ./api-gateway
+    image: code-collab/api-gateway
+    environment:
+      <<: *eureka-env
+      GATEWAY_CORS_ALLOWED_ORIGINS: ${GATEWAY_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8090}
+    ports:
+      - "8080:8080"
+    depends_on:
+      eureka-service:
+        condition: service_healthy
+    mem_limit: 384m
+    networks: [code-collab]
+
+  # --- Business services ---
+  user-service:
+    build: ./user-service
+    image: code-collab/user-service
+    environment:
+      <<: [*postgres-env, *eureka-env]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    mem_limit: 512m
+    networks: [code-collab]
+
+  snippet-service:
+    build: ./snippet-service
+    image: code-collab/snippet-service
+    environment:
+      <<: [*postgres-env, *eureka-env]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    mem_limit: 512m
+    networks: [code-collab]
+
+  execution-service:
+    build: ./execution-service
+    image: code-collab/execution-service
+    environment:
+      <<: [*postgres-env, *rabbitmq-env, *eureka-env]
+    # Runs `docker run` for code execution against the host daemon.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    mem_limit: 512m
+    networks: [code-collab]
+
+  system-events-service:
+    build: ./system-events-service
+    image: code-collab/system-events-service
+    environment:
+      <<: [*postgres-env, *rabbitmq-env, *eureka-env]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    mem_limit: 512m
+    networks: [code-collab]
+
+  # --- Frontend (static bundle via nginx) ---
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
+    image: code-collab/frontend
+    ports:
+      - "8090:80"
+    depends_on:
+      - api-gateway
+    mem_limit: 128m
+    networks: [code-collab]
+
+volumes:
+  postgres-data:
+
+networks:
+  code-collab:
+    driver: bridge
